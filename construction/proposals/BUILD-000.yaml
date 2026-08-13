@@ -1,0 +1,31 @@
+proposal: BUILD-000
+phase: -1
+
+goal: >
+  Freeze the construction algebra: define what a BuildProposal is, what
+  counts as admissibility, which measurements are canonical, what a
+  BuildGrounding record contains, and what constitutes a realized or
+  rejected construction transition. Provide the mechanical verifier that
+  makes these definitions law rather than narrative.
+
+allowed_scope:
+  - construction/
+  - tools/
+
+prediction:
+  verifier_exit_code: "0"
+  proposal_schema_valid: PASS
+  grounding_schema_valid: PASS
+  grounding_prediction_match: PASS
+  scope_conformance: PASS
+  world_behavior: NOT_YET_APPLICABLE
+
+non_claims:
+  - no world ontology or world behavior is introduced
+  - no model harness exists
+  - no ruler, surface, or grounding of the laboratory kind exists
+  - verification law is structural only (stdlib + pyyaml); mypy/pytest
+    law arrives via a later proposal, not implicitly
+
+budget:
+  max_files_changed: 8
