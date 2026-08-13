@@ -1,0 +1,14 @@
+# Structural schema for BuildProposal records (interpreted by
+# tools/verify_construction.py — see construction/ALGEBRA.md).
+record_kind: build_proposal
+id_pattern: "BUILD-[0-9]{3}"
+required:
+  proposal: str
+  phase: int
+  goal: str
+  allowed_scope: list[str]
+  prediction: map[str]
+  non_claims: list[str]
+  budget: map
+budget_required:
+  max_files_changed: int

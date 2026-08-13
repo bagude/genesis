@@ -1,0 +1,21 @@
+# Structural schema for BuildGrounding records (interpreted by
+# tools/verify_construction.py — see construction/ALGEBRA.md).
+record_kind: build_grounding
+id_pattern: "BUILD-[0-9]{3}"
+required:
+  proposal: str
+  predicted: map[str]
+  observed: map[str]
+  unexpected: list[str]
+  evidence: map[str]
+  decision: map
+decision_required:
+  verdict: str
+  next: str
+verdicts:
+  - REALIZED
+  - REJECTED
+cross_checks:
+  - grounding references an existing proposal
+  - predicted equals the proposal's prediction verbatim
+  - observed covers every predicted key
