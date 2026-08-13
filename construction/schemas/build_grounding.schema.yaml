@@ -19,3 +19,11 @@ cross_checks:
   - grounding references an existing proposal
   - predicted equals the proposal's prediction verbatim
   - observed covers every predicted key
+# Format 2 (mandatory for BUILD-001 onward; declare `format: 2`):
+#   every predicted/observed key must either belong to the verifier's
+#   derived vocabulary — proposal_precedence_<id>, scope_conformance_<id>,
+#   budget_conformance_<id>, files_changed_<id>, proposal_commit_<id>,
+#   probe_<name>, open_proposals, untracked_commits — and equal the
+#   derived value exactly, or carry a "reported_" prefix marking it as
+#   explicitly non-measured. evidence.proposal_commit must match the
+#   derived proposal commit. (BUILD-001 measurement law.)

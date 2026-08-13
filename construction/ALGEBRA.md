@@ -1,4 +1,4 @@
-# Construction Algebra — v1 (frozen by BUILD-000)
+# Construction Algebra — v1.1 (frozen by BUILD-000; amended by BUILD-001)
 
 ## Principle
 
@@ -109,6 +109,46 @@ narrative:
 - test/typecheck results (once those laws exist; introduced by proposal)
 - files changed, insertions, deletions for the transition
 - scope conformance of the realization diff
+
+## Amendment v1.1 — Measurement law (BUILD-001, from AUDIT-000)
+
+> **No property is called measured unless `R_B` derives it from
+> repository evidence.**
+
+AUDIT-000 found `E_W = W_Δ − W_0 ≠ 0`: the v1 verifier enforced only
+structural record law, while precedence, scope, and budget were
+builder-reported. BUILD-001 closes this:
+
+- **Attribution.** Every transition commit carries a
+  `Construction-Transition: BUILD-NNN` trailer. The proposal commit is
+  the commit adding the proposal file; it may touch only
+  `construction/proposals/` and `construction/audits/`. Pre-BUILD-001
+  commits are attributed by the record files they touch (grandfather
+  clause).
+- **Derived vocabulary.** The verifier derives, from git history and
+  probe execution: `proposal_precedence_<id>` (strict git ancestry),
+  `scope_conformance_<id>` (union of realization diffs vs
+  allowed_scope + implicit record paths), `budget_conformance_<id>` and
+  `files_changed_<id>` (distinct files across transition commits),
+  `proposal_commit_<id>`, `probe_<name>` (probes declared in the
+  proposal, executed by the verifier), `open_proposals`, and
+  `untracked_commits`.
+- **Format 2 groundings** (mandatory from BUILD-001): predicted and
+  observed keys must be derived-vocabulary keys that match the derived
+  values exactly, or carry a `reported_` prefix marking them as
+  explicitly non-measured. `evidence.proposal_commit` must match the
+  derived proposal commit.
+- **Lifecycle.** A proposal without a grounding is `OPEN`. At most one
+  OPEN proposal may exist, and it must be the highest-numbered. Statuses
+  are `OPEN`, `REALIZED`, `REJECTED` — derived from the ledger, never
+  declared.
+- **No untracked transitions.** Every commit descending from the
+  BUILD-001 realization must carry a transition trailer.
+- **Independent attestation.** CI (`.github/workflows/construction.yml`)
+  re-runs the verifier on every push; local and remote runs must agree.
+
+External audits are archived under `construction/audits/` and enter the
+ledger with the proposal commit of the transition that answers them.
 
 ## Bootstrap note
 

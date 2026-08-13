@@ -1,0 +1,43 @@
+proposal: BUILD-001
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-000: PASS
+  scope_conformance_BUILD-000: PASS
+  budget_conformance_BUILD-000: PASS
+  proposal_precedence_BUILD-001: PASS
+  scope_conformance_BUILD-001: PASS
+  budget_conformance_BUILD-001: PASS
+  probe_pyyaml_import: PASS
+  open_proposals: "0"
+  untracked_commits: "0"
+
+observed:
+  proposal_precedence_BUILD-000: PASS
+  scope_conformance_BUILD-000: PASS
+  budget_conformance_BUILD-000: PASS
+  proposal_precedence_BUILD-001: PASS
+  scope_conformance_BUILD-001: PASS
+  budget_conformance_BUILD-001: PASS
+  probe_pyyaml_import: PASS
+  open_proposals: "0"
+  untracked_commits: "0"
+  files_changed_BUILD-001: "9"
+
+unexpected:
+  - AUDIT-000 findings 1-3 (BUILD-000 precedence, scope, budget) are now
+    verifier-derived retroactively via the grandfather attribution and
+    confirmed PASS, closing them without touching BUILD-000's records
+  - finding 10 (independent CI reproduction) remains INCONCLUSIVE by
+    declared non_claim; the workflow ships in this transition but its
+    first remote PASS is observable only after push
+
+evidence:
+  audit: construction/audits/AUDIT-000.md
+  proposal_commit: "6bceceb"
+  verifier_cmd: python3 tools/verify_construction.py
+  ci_workflow: .github/workflows/construction.yml
+
+decision:
+  verdict: REALIZED
+  next: BUILD-002 (Phase 0 — Genesis / contracts)
