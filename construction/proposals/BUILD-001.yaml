@@ -1,0 +1,67 @@
+proposal: BUILD-001
+phase: -1
+
+goal: >
+  Close E_W between declared construction law and verifier behavior
+  (AUDIT-000): make R_B derive ProposalPrecedence, ScopeConformance,
+  BudgetConformance, ProbeResults, and EvidenceProvenance from
+  repository evidence (git history and executed probes), so that no
+  property is called measured unless the verifier derives it. Introduce
+  commit-trailer attribution of transitions, an explicit open-proposal
+  lifecycle, and independent CI attestation of the verifier.
+
+allowed_scope:
+  - construction/
+  - tools/
+  - .github/
+
+mechanism: >
+  (1) Every transition commit carries a "Construction-Transition:
+  BUILD-NNN" trailer; the proposal commit is the commit that adds the
+  proposal file and may touch only construction/proposals/ and
+  construction/audits/. Legacy pre-BUILD-001 commits are attributed by
+  the files they touch (grandfather clause). (2) Precedence is derived
+  via git ancestry: the proposal commit must be a strict ancestor of
+  every realization commit. (3) Scope is derived from the union of
+  realization-commit diffs against allowed_scope plus the implicit
+  record paths. (4) Budget is derived as the count of distinct files
+  across all transition commits. (5) Probes declared in the proposal
+  are executed by the verifier itself; their results are derived, not
+  reported. (6) Grounding records for BUILD-001 onward declare format 2:
+  every predicted/observed key must either belong to the verifier's
+  derived vocabulary (and match the derived value exactly) or carry a
+  "reported_" prefix marking it explicitly as non-measured. (7) Evidence
+  commit references are validated against derived attribution. (8) A
+  proposal without a grounding is OPEN; at most one OPEN proposal may
+  exist and it must be the highest-numbered. (9) A GitHub Actions
+  workflow runs the verifier on every push as independent attestation.
+
+prediction:
+  proposal_precedence_BUILD-000: PASS
+  scope_conformance_BUILD-000: PASS
+  budget_conformance_BUILD-000: PASS
+  proposal_precedence_BUILD-001: PASS
+  scope_conformance_BUILD-001: PASS
+  budget_conformance_BUILD-001: PASS
+  probe_pyyaml_import: PASS
+  open_proposals: "0"
+  untracked_commits: "0"
+
+probes:
+  - name: pyyaml_import
+    cmd: "python3 -c 'import yaml'"
+    expect_exit: 0
+
+non_claims:
+  - CI attestation is configured in this transition but its independent
+    PASS cannot be observed from within the transition; AUDIT-000
+    finding 10 remains INCONCLUSIVE until a remote run is observed
+  - probe law is demonstrated with a minimal probe; pytest/mypy law
+    arrives with Phase 0 (BUILD-002), per BUILD-000's grounding
+  - no world ontology, model harness, surface, or ruler code
+  - retro-derivation of BUILD-000 uses the grandfather attribution;
+    BUILD-000's format-1 grounding is not re-required to match the
+    derived vocabulary
+
+budget:
+  max_files_changed: 10
