@@ -1,0 +1,68 @@
+proposal: BUILD-002
+phase: -1
+
+goal: >
+  Governance closure (AUDIT-001 repair): separate passive measurement
+  from active experiment so that the measurement locus holds no write
+  capability; freeze attribution of grounded transitions; make closed
+  construction records immutable; require canonical commit identity in
+  evidence references.
+
+allowed_scope:
+  - construction/
+  - tools/
+
+mechanism: >
+  Obligation 1 (K_RB_write = 0): probe commands are removed from
+  proposal-controlled data. A law-controlled registry (tools/probes.yaml,
+  governed by scope law like any code) is the single source of
+  executable probe definitions; proposals reference probes by name only.
+  The verifier is split into two operators: R_B (passive derivation over
+  git evidence, no execution) and E_B (experiments = registry probes),
+  and E_B executes in an ephemeral detached git worktree so the
+  authoritative tree is never the substrate of an experiment; isolation
+  is attested by requiring the authoritative tree's status snapshot to
+  be identical before and after the experiment phase (derived key
+  experiment_tree_isolation). Legacy inline probe specs (BUILD-001) are
+  not executed as written: they must name a registry entry whose command
+  and expected exit match, else violation.
+  Obligation 2 (attribution frozen): for a grounded proposal, the
+  attribution set is frozen at the commit that added its grounding;
+  any attributed commit that is not an ancestor-or-equal of that
+  boundary is a violation, counted in derived key attribution_extensions.
+  Obligation 3 (closed records immutable): the record namespaces
+  construction/proposals/, construction/groundings/, construction/audits/
+  are add-only over all history; any modify/delete/rename touching them
+  is a violation, counted in derived key closed_record_mutations.
+  Proposal commits are further restricted to additions only.
+  Obligation 4 (canonical identity): from BUILD-002 onward,
+  evidence.proposal_commit must equal the full 40-hex derived commit id
+  exactly; BUILD-001's prefix relation is grandfathered as a closed
+  record and noted as such.
+
+prediction:
+  proposal_precedence_BUILD-002: PASS
+  scope_conformance_BUILD-002: PASS
+  budget_conformance_BUILD-002: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - experiment isolation is asserted with respect to the authoritative
+    repository state (attested by tree-status equality), not as an OS
+    sandbox; registry vetting is governance, not containment
+  - BUILD-001's evidence prefix relation and inline probe record remain
+    as closed records; they are re-validated under grandfather rules,
+    not rewritten
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-003
+
+budget:
+  max_files_changed: 10
