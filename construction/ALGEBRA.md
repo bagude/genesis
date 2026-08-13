@@ -1,4 +1,4 @@
-# Construction Algebra — v1.1 (frozen by BUILD-000; amended by BUILD-001)
+# Construction Algebra — v1.2 (frozen by BUILD-000; amended by BUILD-001, BUILD-002)
 
 ## Principle
 
@@ -149,6 +149,34 @@ builder-reported. BUILD-001 closes this:
 
 External audits are archived under `construction/audits/` and enter the
 ledger with the proposal commit of the transition that answers them.
+
+## Amendment v1.2 — Governance closure (BUILD-002, from AUDIT-001)
+
+> **A measuring instrument that executes proposal-controlled commands
+> is itself an actuator. Measurement and Experiment are distinct
+> operators with distinct capability sets.**
+
+- **Measurement/Experiment separation.** The verifier is two operators:
+  `R_B` (passive derivation over git evidence; executes nothing;
+  `K_{R_B}^write = ∅`) and `E_B` (experiments). Probe definitions live
+  only in the law-controlled registry `tools/probes.yaml`; proposals
+  reference probes by name and can never inject a command. `E_B`
+  executes in an ephemeral detached worktree — the authoritative tree
+  is never an experiment's substrate — and isolation is attested by
+  tree-status snapshot equality (`experiment_tree_isolation`).
+- **Attribution freeze.** `Grounded(P_i) ⇒ Attribution(P_i)` is frozen
+  at the commit adding `groundings/BUILD-i.yaml`; any attributed commit
+  not ancestor-or-equal of that boundary is a violation
+  (`attribution_extensions`). Historical derived measurements of closed
+  transitions can therefore never change.
+- **Record immutability.** `construction/proposals/`,
+  `construction/groundings/`, `construction/audits/` are add-only over
+  all history (`closed_record_mutations`); proposal commits may contain
+  additions only. Records are amended by new records, never edited.
+- **Canonical evidence identity.** From BUILD-002 onward,
+  `evidence.proposal_commit` must equal the full 40-hex derived commit
+  id exactly. BUILD-001's prefix relation is grandfathered as a closed
+  record.
 
 ## Bootstrap note
 

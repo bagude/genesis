@@ -27,3 +27,7 @@ cross_checks:
 #   derived value exactly, or carry a "reported_" prefix marking it as
 #   explicitly non-measured. evidence.proposal_commit must match the
 #   derived proposal commit. (BUILD-001 measurement law.)
+#   Additional derived keys from BUILD-002: experiment_tree_isolation,
+#   attribution_extensions, closed_record_mutations. From BUILD-002
+#   onward evidence.proposal_commit must be the full 40-hex canonical
+#   commit identity, exactly equal to the derived value.

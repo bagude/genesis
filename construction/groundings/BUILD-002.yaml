@@ -1,0 +1,49 @@
+proposal: BUILD-002
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-002: PASS
+  scope_conformance_BUILD-002: PASS
+  budget_conformance_BUILD-002: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+
+observed:
+  proposal_precedence_BUILD-002: PASS
+  scope_conformance_BUILD-002: PASS
+  budget_conformance_BUILD-002: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  files_changed_BUILD-002: "9"
+
+unexpected:
+  - mid-transition, the stricter v3 re-derivation exposed a v2 design
+    flaw not named by AUDIT-001; ledger-global derived keys are
+    TIME-INDEXED, and v2 semantics matched closed groundings against
+    present-state globals, which would invalidate every closed record
+    the moment a new proposal opened (BUILD-001's grounding failed
+    against HEAD with BUILD-002 OPEN); v3 therefore evaluates
+    ledger-global keys as of each grounding's closure boundary commit,
+    while laws are enforced at the present state
+  - the failure above occurred in the uncommitted candidate state and
+    was repaired before realization; it is recorded here because the
+    candidate's first verification attempt was a rejection event of the
+    inner loop, not a clean pass
+
+evidence:
+  audit: construction/audits/AUDIT-001.md
+  proposal_commit: "b6dc47e23d2294e1c1bf64a1500f8b76b78d9476"
+  verifier_cmd: python3 tools/verify_construction.py
+  probe_registry: tools/probes.yaml
+
+decision:
+  verdict: REALIZED
+  next: BUILD-003 (Phase 0 — Genesis / contracts)

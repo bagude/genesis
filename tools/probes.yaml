@@ -1,0 +1,13 @@
+# Probe registry — the single source of executable probe definitions
+# (BUILD-002, AUDIT-001 obligation 1).
+#
+# Proposals reference probes by NAME ONLY; proposal-controlled data can
+# never inject a command into E_B. Adding or changing an entry here is
+# a code change governed by scope law like any other file in tools/.
+#
+# Probes are experiments (E_B), not measurements (R_B): they execute in
+# an ephemeral detached worktree, never against the authoritative tree.
+probes:
+  pyyaml_import:
+    cmd: "python3 -c 'import yaml'"
+    expect_exit: 0

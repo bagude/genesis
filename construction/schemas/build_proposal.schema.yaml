@@ -14,7 +14,11 @@ budget_required:
   max_files_changed: int
 # Optional keys (interpreted by the verifier when present):
 #   mechanism: str        — preregistered implementation mechanism
-#   probes: list of {name: str, cmd: str, expect_exit: int}
-#     Probes are EXECUTED by tools/verify_construction.py; their results
-#     enter the derived vocabulary as probe_<name> and are never taken
-#     from the builder's narrative (BUILD-001 measurement law).
+#   probes: list[str]     — names of probes in tools/probes.yaml
+#     Probes are experiments (E_B), resolved exclusively through the
+#     law-controlled registry and executed in an ephemeral detached
+#     worktree; results enter the derived vocabulary as probe_<name>
+#     (BUILD-001 measurement law; BUILD-002 governance closure).
+#     Inline {name, cmd, expect_exit} specs are unlawful from BUILD-002;
+#     BUILD-001's inline record is grandfathered but must agree with the
+#     registry to execute.
