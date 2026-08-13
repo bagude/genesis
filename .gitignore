@@ -1,0 +1,9 @@
+# Claude Code session machinery (worktrees live under .claude/worktrees/)
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
