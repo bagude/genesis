@@ -1,0 +1,31 @@
+transition: BUILD-007
+attempt: 1
+state: PARENT_ADMISSION_FAILED
+target_commit: 772a946a76639b8636a8ea661e5122d4db7568f2
+parent_canonical: 79042987a5f145d37c194581b2d6248179b4d746
+authority_identity: 57f7c3eac284f36e17a512526938330997185f3d67bf06a050afc985c86a5f2a
+exception_grant: NONE
+parent_law_verdict: FAIL
+observed_violations:
+  - "construction/groundings/BUILD-007.yaml.observed: key 'typed_probe_semantics_selftest' is neither derived by R_B/E_B nor marked reported_"
+successor_payload_viability: NOT_EVALUATED (parent FAIL; candidate code never executed)
+successor_canonical_viability: NOT_EVALUATED
+gate_evidence_object: 567ee1d5c9e4e6bae571e6a1820db2cdacc9ccff
+root_cause: >
+  the candidate grounding recorded the new derived key
+  typed_probe_semantics_selftest in observed, but BUILD-004's
+  law-evolution rule requires novel measurements to enter a candidate's
+  grounding as reported_ keys and to become derived vocabulary only for
+  SUBSEQUENT transitions. The parent law (V_BUILD-006) therefore
+  correctly refused to admit a grounding asserting a key it cannot
+  derive. The defect is in the grounding record, not in the repaired
+  capability mechanism.
+canonical_effect: >
+  PayloadState unchanged (canonical ref never moved; no authority
+  transferred); GovernanceLedger appends this rejection event.
+executor_independent_measurement: >
+  performed before admission and retained: privilege certified
+  (NoNewPrivs=1, all capability sets empty, uid/gid 65534) and all
+  forbidden effects DENIED with scratch ALLOWED, measured by an
+  executor-authored probe in an executor-built realm.
+disposition: corrected in attempt 2 under bootstrap amendment 1
