@@ -1,0 +1,24 @@
+receipt: GateReceipt
+target_commit: 6477b34ef3d39cf3c0e8e010e33b1fe5f5fdf53f
+target_tree: e28a62b548351e349c84573cc181486dc3fd0002
+authority_canonical: 295e17c6c2948ad62a8164bec0d447cacdadab7f
+authority_identity: a498931e482a1022e03f80f3291d75f28177363e5f65ee05d42a1a10a69ad4ac
+authority_members:
+  - path: tools/verify_construction.py
+    blob: c495d9ffaa7e89f6b210de8672b4a034f3227bbb
+  - path: tools/probes.yaml
+    blob: 01eb084c0d6b856d5b80da368abad96d2cf7e57b
+  - path: construction/schemas/build_proposal.schema.yaml
+    blob: a706e30ba7dae9bd17b6114144bbe3d2a123d870
+  - path: construction/schemas/build_grounding.schema.yaml
+    blob: dcadfd1efa6a3981883b570a876c58662ef74ddc
+parent_law_verdict: PASS
+prospective_law_verdict: PASS
+environment_id: "05fb1d1e8f917bec"
+probe_evidence:
+  probe_pyyaml_import: PASS
+issuer: >
+  A_003_parent (V_BUILD-002 bundle frozen in
+  construction/audits/PRE-AUDIT-003-BOOTSTRAP.md), executed as the
+  bootstrap gate ceremony by the builder session under the bootstrap
+  issuer's authority declared in that record.
