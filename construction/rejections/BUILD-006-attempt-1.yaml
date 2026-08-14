@@ -1,0 +1,28 @@
+transition: BUILD-006
+attempt: 1
+target_commit: 69c1a2c02aa4384de833db820c0ce48c776e601a
+parent_canonical: 416ea1e03885502c963496d6572fd1360566c40a
+authority_identity: 21c34b4e7772abdce7441293e1c475d3a19380e21674798844603ed226d4a953
+parent_law_verdict: PASS
+successor_viability_verdict: PASS
+gate_evidence_object: 99e7e80f38dd4f542e59b4345ffc6a91ff7224f8
+viability_evidence_object: 0c19807e6b316eb50663a52aeec4d8d40fa26fd1
+stage: POST_PROMOTION_LEDGER_VERIFICATION
+observed_violations:
+  - "construction/receipts/BUILD-006.yaml: capability_envelope.network_denied = 'None' (required 'true')"
+  - "construction/receipts/BUILD-006.yaml: capability_envelope.real_repo_refs_unchanged = 'None' (required 'true')"
+root_cause: >
+  the candidate's verify_construction.py v7 left check_receipt_v3's
+  BUILD-005-era envelope-key checks (network_denied,
+  real_repo_refs_unchanged) ungated by schema_version, so they wrongly
+  applied to the v4 capability envelope whose measured schema uses
+  probe_network and parent_refs_unchanged. Both gates PASSED and the
+  isolation contract was fully certified; the defect is purely in the
+  successor law's self-consistency once its own v4 receipt exists,
+  which is invisible until a BUILD-006 receipt is present. Detected by
+  the candidate's own law at post-promotion ledger verification.
+canonical_effect: >
+  payload state unchanged (reset to parent 416ea1e); governance ledger
+  appends this rejection. Gate and viability evidence remain durable on
+  the remote evidence branch as attempt-1 evidence.
+disposition: fix gated in attempt 2 under bootstrap amendment 1
