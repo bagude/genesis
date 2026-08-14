@@ -1,44 +1,36 @@
 #!/usr/bin/env python3
-"""P_B — Promotion. v3 (BUILD-005, AUDIT-004 repair).
+"""P_B — Publication and authority transfer. v4 (BUILD-007, AUDIT-006).
 
-NO POLICY ARGUMENTS. The caller cannot supply expected, accepted,
-ignored, or waived failures, nor alternate verdict rules. The effective
-decision rule is:
+No policy arguments: the decision rule belongs to accepted authority
+(base rule ∅ expected violations ⊕ an ExceptionGrant resolved by G_B
+from the parent canonical tree). P_B invokes the parent-law GateRun
+itself, so no caller-supplied verdict can authorize anything.
 
-    EffectiveDecisionRule = BaseDecisionRule (zero expected violations)
-                            ⊕ AuthorizedExceptionGrant
+AUDIT-006 Obligation 4 — the state that inherits authority is the state
+that gets verified. Frozen state machine:
 
-where the grant, if any, is resolved by G_B from the ACCEPTED parent
-canonical tree (construction/exceptions/<transition>.yaml). The invoker
-of P_B cannot mint one.
+    CANDIDATE_FINALIZED
+      -> PARENT_ADMITTED           V_t(C) PASS, accepted code only
+      -> SUCCESSOR_PAYLOAD_VIABLE  V_{t+1}(C) in the bounded realm
+      -> FINAL_STATE_STAGED        commit S = C + receipt + evidence
+                                   mirrors, built WITHOUT touching the
+                                   canonical ref (git plumbing)
+      -> SUCCESSOR_CANONICAL_VIABLE V_{t+1}(S) in the bounded realm
+      -> AUTHORIZED
+      -> PUBLISHED / AUTHORITY_TRANSFERRED
 
-Dual gate (AUDIT-004 obligation 3): promotion requires
+Hash(Stage) = Hash(FinalAcceptedState) holds by construction: publication
+fast-forwards canonical to exactly S and appends NOTHING afterwards. The
+CanonicalViability evidence object is external (evidence ref/branch), so
+recording it cannot perturb S.
 
-    ParentLaw(C) = PASS  AND  SuccessorViability(C) = PASS
-
-Parent evaluation runs first and executes only accepted-law code over
-candidate data; parent FAIL rejects WITHOUT ever executing candidate
-code. Successor viability runs the candidate's own law strictly inside
-the bounded CapabilityEnvelope (tools/prospective.py): isolated
-credential-free clone, minimal environment, OS-enforced network
-denial, measured evidence. The parent remains the admitting authority;
-the successor never authorizes itself — but a successor that cannot
-validate its own proposed accepted state does not become the next
-authority.
-
-Payload vs governance ledger (AUDIT-004 obligation 5):
-
-    Reject(C)  => PayloadState' = PayloadState
-                  GovernanceLedger' = GovernanceLedger ⊕ RejectionEvent
-    Promote(C) => PayloadState' = CandidatePayload
-
-A rejection DOES advance the canonical commit (the ledger append); it
-never changes the payload coordinate. This tool says exactly that.
-
-Chronology (AUDIT-004 obligation 4, Option A): evidence objects are
-pushed to the remote governance branch claude/genesis-evidence BEFORE
-promotion; if that push fails the receipt's chronology_status is
-downgraded to CHRONOLOGY_UNATTESTED explicitly, never silently.
+AUTHORITY TRANSFER EVENT = the single atomic expected-old-value
+update-ref publishing S. Before it, A_t is authoritative and S is
+provisional; after it, A_{t+1} governs. Any gate failure ⇒ no ref
+movement ⇒ PayloadState unchanged, while the GovernanceLedger may append
+a RejectionEvent. Capability-level exclusivity is not claimed: the
+branch is unprotected, so this is the only LAWFUL path, not the only
+physically possible one.
 """
 
 from __future__ import annotations
@@ -57,46 +49,75 @@ ROOT = lib.ROOT
 EVIDENCE_BRANCH = "claude/genesis-evidence"
 
 
-def append_record(branch: str, files: dict[str, str], trailer: str) -> None:
-    lib.git("checkout", branch)
-    for relpath, content in files.items():
-        dest = ROOT / relpath
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content)
-        lib.git("add", relpath)
-    names = ", ".join(Path(p).name for p in files)
-    lib.git("commit", "-m", f"Append {names}\n\n{trailer}")
-
-
 def push_evidence() -> str:
-    """Best-effort pre-promotion push of the evidence chain to the
-    remote governance BRANCH (non-branch ref pushes are platform-
-    denied). Returns the chronology status this ceremony can honestly
-    claim."""
+    """Push the evidence chain to the remote governance BRANCH (non-branch
+    ref pushes are platform-denied). Returns the honest chronology status:
+    presence on the remote, never pre-promotion ordering."""
     try:
         lib.git("push", "origin",
                 f"{lib.EVIDENCE_REF}:refs/heads/{EVIDENCE_BRANCH}")
-        # Honest: presence on the remote branch, NOT pre-promotion
-        # ordering (AUDIT-005 obligation 6). The verifier derives this
-        # independently; the receipt value is informational only.
         return "REMOTE_EVIDENCE_PRESENT"
     except RuntimeError as exc:
         print(f"warning: evidence branch push failed: {exc}")
         return "REMOTE_EVIDENCE_ABSENT"
 
 
-def reject(canonical: str, transition: str, records: dict) -> None:
+def stage_final_state(base: str, files: dict[str, str],
+                      transition: str) -> str:
+    """Build commit S on top of `base` containing exactly `files`, using
+    plumbing only — no branch, no checkout, no canonical mutation. S is
+    the exact would-be accepted state."""
+    import os
+    import subprocess
+
+    # Build the tree in a scratch index so the working index and the
+    # working tree are never touched by staging.
+    tmp_index = ROOT / ".git" / f"index.stage.{transition}"
+    env = os.environ.copy()
+    env["GIT_INDEX_FILE"] = str(tmp_index)
+
+    def g(*args: str) -> str:
+        res = subprocess.run(["git", *args], capture_output=True, cwd=ROOT,
+                             env=env)
+        if res.returncode != 0:
+            raise RuntimeError(f"git {' '.join(args)}: "
+                               f"{res.stderr.decode(errors='replace')}")
+        return res.stdout.decode().strip()
+
+    try:
+        g("read-tree", base)
+        for relpath, content in files.items():
+            blob = subprocess.run(["git", "hash-object", "-w", "--stdin"],
+                                  input=content.encode(), capture_output=True,
+                                  cwd=ROOT, env=env)
+            blob_sha = blob.stdout.decode().strip()
+            g("update-index", "--add", "--cacheinfo",
+              f"100644,{blob_sha},{relpath}")
+        tree = g("write-tree")
+    finally:
+        if tmp_index.exists():
+            tmp_index.unlink()
+    return lib.git("commit-tree", tree, "-p", base, "-m",
+                   f"Append PromotionReceipt and evidence mirrors for "
+                   f"{transition}\n\nConstruction-Receipt: {transition}")
+
+
+def reject(canonical: str, transition: str, record: dict) -> None:
+    """PayloadState unchanged; GovernanceLedger appends the event."""
     n = 1
     while (ROOT / "construction" / "rejections" /
            f"{transition}-attempt-{n}.yaml").exists():
         n += 1
-    append_record(
-        canonical,
-        {f"construction/rejections/{transition}-attempt-{n}.yaml":
-            yaml.safe_dump(records, sort_keys=False)},
-        f"Construction-Receipt: {transition}")
-    print("REJECT: payload state unchanged; governance ledger appended "
-          "the rejection event")
+    lib.git("checkout", canonical)
+    dest = ROOT / "construction" / "rejections" / f"{transition}-attempt-{n}.yaml"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(yaml.safe_dump(record, sort_keys=False))
+    lib.git("add", str(dest.relative_to(ROOT)))
+    lib.git("commit", "-m", f"Append rejection record for {transition} "
+                            f"attempt {n}\n\n"
+                            f"Construction-Receipt: {transition}")
+    print("REJECT: payload state unchanged (no authority transferred); "
+          "governance ledger appended the rejection event")
 
 
 def main() -> int:
@@ -112,62 +133,52 @@ def main() -> int:
         print("REJECT: candidate is not a fast-forward of canonical")
         return 1
 
-    # Decision rule from accepted authority only.
     expected, grant_id = gate.resolve_exception_grant(canonical_sha,
                                                       args.transition)
 
-    # Gate 1: parent admission (accepted code over candidate data).
-    parent = gate.run_parent_law(canonical_sha, candidate_sha,
-                                 expected, args.transition)
+    # --- PARENT_ADMITTED: accepted code only; candidate code not run yet.
+    parent = gate.run_parent_law(canonical_sha, candidate_sha, expected,
+                                 args.transition)
     chronology = push_evidence()
     if parent["verdict"] != "PASS":
         reject(args.canonical, args.transition, {
-            "transition": args.transition,
-            "target_commit": candidate_sha,
-            "parent_canonical": canonical_sha,
+            "transition": args.transition, "state": "PARENT_ADMISSION_FAILED",
+            "target_commit": candidate_sha, "parent_canonical": canonical_sha,
             "authority_identity": parent["authority_identity"],
             "parent_law_verdict": parent["verdict"],
             "violations": parent["violations"],
             "exception_grant": grant_id,
-            "successor_viability_verdict":
-                "NOT_EVALUATED (parent FAIL: candidate code not executed)",
+            "successor_payload_viability": "NOT_EVALUATED "
+                                           "(candidate code not executed)",
             "evidence_object": parent["evidence_object"],
             "chronology_status": chronology,
         })
         return 1
 
-    # Gate 2: successor viability, bounded capability surface only.
-    viability = prospective.evaluate(candidate_sha, args.transition)
-    viability_meta = {k: v for k, v in viability.items() if k != "output"}
-    viability_evidence = lib.write_evidence(viability_meta,
-                                            viability["output"])
+    # --- SUCCESSOR_PAYLOAD_VIABLE: candidate law over candidate payload.
+    payload = prospective.evaluate(candidate_sha, args.transition, "payload")
+    payload_meta = {k: v for k, v in payload.items() if k != "output"}
+    payload_ev = lib.write_evidence(payload_meta, payload.get("output", ""))
     chronology = push_evidence()
-    if viability["verdict"] != "PASS":
+    if payload["verdict"] != "PASS":
         reject(args.canonical, args.transition, {
-            "transition": args.transition,
-            "target_commit": candidate_sha,
-            "parent_canonical": canonical_sha,
+            "transition": args.transition, "state": "PAYLOAD_VIABILITY_FAILED",
+            "target_commit": candidate_sha, "parent_canonical": canonical_sha,
             "parent_law_verdict": parent["verdict"],
-            "successor_viability_verdict": viability["verdict"],
-            "viability_violations": viability["violations"],
-            "capability_envelope": viability["capability_envelope"],
-            "exception_grant": grant_id,
+            "payload_viability_verdict": payload["verdict"],
+            "payload_problems": (payload.get("probe_problems", []) +
+                                 payload.get("privilege_problems", [])),
+            "violations": payload.get("violations"),
             "evidence_object": parent["evidence_object"],
-            "viability_evidence_object": viability_evidence,
+            "payload_viability_evidence_object": payload_ev,
             "chronology_status": chronology,
         })
         return 1
 
-    # AuthorizationDecision: both actual results, in-process.
-    assert parent["target_commit"] == candidate_sha
-    lib.git("update-ref", f"refs/heads/{args.canonical}",
-            candidate_sha, canonical_sha)
-    print(f"PROMOTED {args.canonical}: payload {canonical_sha[:12]} -> "
-          f"{candidate_sha[:12]}")
-
+    # --- FINAL_STATE_STAGED: build the exact would-be accepted state.
     receipt = {
         "receipt": "PromotionReceipt",
-        "schema_version": 4,
+        "schema_version": 5,
         "transition": args.transition,
         "target_commit": candidate_sha,
         "target_tree": parent["target_tree"],
@@ -175,37 +186,85 @@ def main() -> int:
         "authority_identity": parent["authority_identity"],
         "authority_rule": parent["authority_rule"],
         "evidence_object": parent["evidence_object"],
-        "viability_evidence_object": viability_evidence,
+        "payload_viability_evidence_object": payload_ev,
         "parent_law_verdict": parent["verdict"],
         "expected_violations": parent["expected_violations"],
         "exception_grant": grant_id,
-        "successor_viability_verdict": viability["verdict"],
-        "capability_policy_id": viability.get("capability_policy_id"),
-        # Duplicate of the certified envelope for convenience; V_B
-        # requires exact equality with the bound evidence object and
-        # certifies from the evidence, never from this copy.
-        "capability_envelope": viability.get("capability_envelope"),
+        "successor_payload_viability_verdict": payload["verdict"],
+        "canonical_viability": "EXTERNAL_EVIDENCE",
+        "capability_policy_id": payload["capability_policy_id"],
+        "capability_policy_blob": payload["capability_policy_blob"],
+        "privilege_measured": payload["privilege_measured"],
+        "capability_envelope": payload["capability_envelope"],
+        "integrity_before": payload["integrity_before"],
+        "integrity_after": payload["integrity_after"],
         "chronology_status": chronology,
         "prepromotion_chronology": "UNATTESTED",
+        "authority_transfer_event": "PUBLISH_REF_UPDATE",
         "environment_id": parent["environment_id"],
     }
-    parent_meta = {k: v for k, v in parent.items()
-                   if k not in ("output", "evidence_object")}
-    append_record(
-        args.canonical,
-        {f"construction/receipts/{args.transition}.yaml":
-            yaml.safe_dump(receipt, sort_keys=False),
-         f"construction/evidence/{args.transition}.yaml":
-            yaml.safe_dump(parent_meta, sort_keys=False),
-         f"construction/evidence/{args.transition}.log": parent["output"],
-         f"construction/evidence/{args.transition}-viability.yaml":
-            yaml.safe_dump(viability_meta, sort_keys=False),
-         f"construction/evidence/{args.transition}-viability.log":
-            viability["output"]},
-        f"Construction-Receipt: {args.transition}")
-    print(f"receipt + evidence mirrors appended "
-          f"(gate {parent['evidence_object'][:12]}, "
-          f"viability {viability_evidence[:12]})")
+    t = args.transition
+    staged_files = {
+        f"construction/receipts/{t}.yaml": yaml.safe_dump(receipt,
+                                                          sort_keys=False),
+        f"construction/evidence/{t}.yaml": yaml.safe_dump(
+            {k: v for k, v in parent.items()
+             if k not in ("output", "evidence_object")}, sort_keys=False),
+        f"construction/evidence/{t}.log": parent["output"],
+        f"construction/evidence/{t}-payload-viability.yaml": yaml.safe_dump(
+            payload_meta, sort_keys=False),
+        f"construction/evidence/{t}-payload-viability.log":
+            payload.get("output", ""),
+    }
+    staged = stage_final_state(candidate_sha, staged_files, t)
+    # The staged state must be REF-REACHABLE to be independently
+    # evaluable — `git clone --no-local` transfers only reachable
+    # objects — while remaining NON-CANONICAL, so its existence confers
+    # no authority (BUILD-007-BOOTSTRAP-AMENDMENT-2). The staging branch
+    # lives only across the canonical-viability window and is deleted
+    # afterwards whatever the verdict.
+    staging_ref = f"refs/heads/staged/{t}"
+    lib.git("update-ref", staging_ref, staged)
+    print(f"FINAL_STATE_STAGED: {staged} (staging ref {staging_ref}, "
+          f"non-canonical)")
+
+    # --- SUCCESSOR_CANONICAL_VIABLE: the state that will inherit authority.
+    try:
+        canonical_v = prospective.evaluate(staged, t, "canonical")
+    finally:
+        try:
+            lib.git("update-ref", "-d", staging_ref)
+        except RuntimeError as exc:
+            print(f"warning: staging ref cleanup failed: {exc}")
+    cv_meta = {k: v for k, v in canonical_v.items() if k != "output"}
+    cv_meta["staged_state_commit"] = staged
+    cv_ev = lib.write_evidence(cv_meta, canonical_v.get("output", ""))
+    chronology = push_evidence()
+    if canonical_v["verdict"] != "PASS":
+        reject(args.canonical, t, {
+            "transition": t, "state": "CANONICAL_VIABILITY_FAILED",
+            "target_commit": candidate_sha, "staged_state_commit": staged,
+            "parent_canonical": canonical_sha,
+            "parent_law_verdict": parent["verdict"],
+            "payload_viability_verdict": payload["verdict"],
+            "canonical_viability_verdict": canonical_v["verdict"],
+            "violations": canonical_v.get("violations"),
+            "evidence_object": parent["evidence_object"],
+            "payload_viability_evidence_object": payload_ev,
+            "canonical_viability_evidence_object": cv_ev,
+            "chronology_status": chronology,
+            "note": "no authority was transferred: canonical ref never moved",
+        })
+        return 1
+
+    # --- AUTHORIZED -> PUBLISHED (the authority-transfer event).
+    lib.git("update-ref", f"refs/heads/{args.canonical}", staged,
+            canonical_sha)
+    lib.git("checkout", args.canonical)
+    lib.git("reset", "--hard", staged)
+    print(f"AUTHORITY_TRANSFERRED: payload {canonical_sha[:12]} -> "
+          f"{candidate_sha[:12]}, accepted state = staged {staged[:12]} "
+          f"(canonical viability evidence {cv_ev[:12]}, external)")
     return 0
 
 

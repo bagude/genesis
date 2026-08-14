@@ -52,6 +52,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import authority_lib as lib  # noqa: E402  (single source of authority truth)
+import capability_policy as pol  # noqa: E402  (frozen capability policy)
+import selftest_probe_semantics as selftest  # noqa: E402  (pure logic)
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = ROOT / "construction" / "schemas"
@@ -87,6 +89,11 @@ RECEIPT_REQUIRED_FROM = 4  # first proposal whose closed grounding MUST
 RECEIPT_V3_FROM = 5     # first proposal requiring schema-v3 receipts:
                         # dual-gate viability, capability envelope,
                         # typed chronology, explicit exception field
+RECEIPT_V5_FROM = 7     # first proposal requiring schema-v5 receipts:
+                        # typed probe verdicts, measured privilege state
+                        # matching the frozen contract, integrity rulers
+                        # with declared scope, distinct payload and
+                        # canonical viability, accepted-state identity
 RECEIPT_V4_FROM = 6     # first proposal requiring schema-v4 receipts:
                         # capability envelope DERIVED from bound
                         # prospective evidence, adversarial probes all
@@ -598,6 +605,11 @@ def check_receipts(proposals: dict[str, dict],
             if pid_number(pid) >= RECEIPT_V4_FROM:
                 provenance[f"capability_{pid}"] = \
                     check_receipt_v4(label, rec, schema_v)
+            if pid_number(pid) >= RECEIPT_V5_FROM:
+                provenance[f"certification_{pid}"] = \
+                    check_receipt_v5(label, rec, schema_v)
+                provenance[f"canonviability_{pid}"] = \
+                    derive_canonical_viability(pid)
     for pid in sorted(grounded):
         if pid not in proposals or pid_number(pid) < RECEIPT_REQUIRED_FROM \
                 or pid in receipts:
@@ -633,6 +645,33 @@ def read_evidence_any(pid: str, rec: dict) -> dict:
         raise RuntimeError(
             f"evidence object '{evidence_id}' unreadable and no mirror")
     return meta
+
+
+def derive_canonical_viability(pid: str) -> str:
+    """Search the evidence chain for a PASS canonical-stage evaluation
+    naming this transition's accepted state (the receipt-adding commit).
+    Reports only what is present; never fails the ledger."""
+    accepted = adding_commit(f"construction/receipts/{pid}.yaml")
+    if not accepted:
+        return "NO_ACCEPTED_STATE"
+    for ref in EVIDENCE_BRANCH_REFS + (lib.EVIDENCE_REF,):
+        try:
+            tip = git("rev-parse", "--verify", "--quiet", ref)
+        except RuntimeError:
+            continue
+        for sha in git("log", "--format=%H", tip).splitlines():
+            try:
+                meta = lib.read_evidence(sha)
+            except RuntimeError:
+                continue
+            if not isinstance(meta, dict):
+                continue
+            if (meta.get("stage") == "canonical"
+                    and meta.get("transition") == pid
+                    and meta.get("staged_state_commit") == accepted):
+                return ("CERTIFIED" if meta.get("verdict") == "PASS"
+                        else f"EVIDENCE_{meta.get('verdict')}")
+    return "UNCERTIFIED_NO_EVIDENCE_AVAILABLE"
 
 
 def check_receipt_provenance(label: str, rec: dict) -> str:
@@ -739,9 +778,12 @@ def check_receipt_v3(label: str, rec: dict, schema_v: int) -> None:
         fail(f"{label}: proposals >= BUILD-{RECEIPT_V3_FROM:03d} require "
              f"schema_version >= 3 receipts")
         return
-    if rec.get("successor_viability_verdict") != "PASS":
-        fail(f"{label}: promoted receipt lacks successor viability PASS "
-             f"(dual-gate law)")
+    if rec.get("schema_version", 1) < 5:
+        if rec.get("successor_viability_verdict") != "PASS":
+            fail(f"{label}: promoted receipt lacks successor viability PASS "
+                 f"(dual-gate law)")
+    elif rec.get("successor_payload_viability_verdict") != "PASS":
+        fail(f"{label}: promoted receipt lacks payload viability PASS")
     # Envelope-key assertions below describe the schema-v3 (BUILD-005)
     # capability envelope only. Schema-v4 receipts (BUILD-006+) carry a
     # richer measured envelope certified by check_receipt_v4 from the
@@ -757,6 +799,8 @@ def check_receipt_v3(label: str, rec: dict, schema_v: int) -> None:
         if str(envelope.get(key)) != want:
             fail(f"{label}: capability_envelope.{key} = "
                  f"'{envelope.get(key)}' (required '{want}')")
+    if rec.get("schema_version", 1) >= 5:
+        return  # schema-v5 binding is certified by check_receipt_v5
     pid = rec.get("transition", Path(label).stem)
     try:
         vmeta = read_evidence_any(f"{pid}-viability",
@@ -795,6 +839,8 @@ def check_receipt_v4(label: str, rec: dict, schema_v: int) -> str:
         fail(f"{label}: proposals >= BUILD-{RECEIPT_V4_FROM:03d} require "
              f"schema_version >= 4 receipts")
         return "SCHEMA_TOO_OLD"
+    if rec.get("schema_version", 1) >= 5:
+        return  # schema-v5 binding is certified by check_receipt_v5
     pid = rec.get("transition", Path(label).stem)
     try:
         vmeta = read_evidence_any(f"{pid}-viability",
@@ -836,6 +882,93 @@ def check_receipt_v4(label: str, rec: dict, schema_v: int) -> str:
                  f"{certified.get(inv)}")
             ok = False
     return "CAPABILITY_CERTIFIED" if ok else "CAPABILITY_VIOLATION"
+
+
+def check_receipt_v5(label: str, rec: dict, schema_v: int) -> str:
+    """Certification closure (AUDIT-006). Certifies FROM bound evidence:
+
+      * typed probe verdicts — every declared probe present, observed
+        outcome equal to its frozen expected outcome (an ERROR or
+        INCONCLUSIVE never certifies);
+      * measured privilege state equal to the frozen contract
+        (no_new_privs and empty capability sets), read from the realm;
+      * the three integrity rulers equal before/after over their
+        declared scopes;
+      * payload viability and canonical viability as DISTINCT evidence
+        objects, the latter bound to the staged state;
+      * the staged accepted state equals the commit that added this
+        receipt — i.e. the verified state is the state that inherited
+        authority (Hash(Stage) = Hash(FinalAcceptedState)).
+    """
+    if schema_v < 5:
+        fail(f"{label}: proposals >= BUILD-{RECEIPT_V5_FROM:03d} require "
+             f"schema_version >= 5 receipts")
+        return "SCHEMA_TOO_OLD"
+    pid = rec.get("transition", Path(label).stem)
+    ok = True
+
+    # Policy identity must be bound to the accepted policy module.
+    if rec.get("capability_policy_id") != pol.POLICY_ID:
+        fail(f"{label}: capability_policy_id '{rec.get('capability_policy_id')}'"
+             f" != accepted policy '{pol.POLICY_ID}'")
+        ok = False
+
+    # Payload viability evidence: typed probes + privilege + rulers.
+    try:
+        pmeta = read_evidence_any(f"{pid}-payload-viability",
+                                  {"evidence_object":
+                                   rec.get("payload_viability_evidence_object")})
+    except RuntimeError as exc:
+        fail(f"{label}: payload viability evidence unreadable: {exc}")
+        return "EVIDENCE_MISSING"
+
+    if pmeta.get("stage") != "payload":
+        fail(f"{label}: payload evidence stage is '{pmeta.get('stage')}'")
+        ok = False
+    if pmeta.get("target_commit") != rec.get("target_commit"):
+        fail(f"{label}: payload evidence target does not bind receipt")
+        ok = False
+
+    probes_ok, probe_problems = pol.certify_probes(pmeta.get("probes") or {})
+    if not probes_ok:
+        for p in probe_problems:
+            fail(f"{label}: typed probe certification: {p}")
+        ok = False
+    priv_ok, priv_problems = pol.certify_privilege(
+        pmeta.get("privilege_measured") or {})
+    if not priv_ok:
+        for p in priv_problems:
+            fail(f"{label}: privilege certification: {p}")
+        ok = False
+    before, after = pmeta.get("integrity_before"), pmeta.get("integrity_after")
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        fail(f"{label}: payload evidence lacks integrity measurements")
+        ok = False
+    else:
+        for ruler in pol.RULER_IDS:
+            if ruler not in before or ruler not in after:
+                fail(f"{label}: integrity ruler '{ruler}' missing")
+                ok = False
+            elif before[ruler] != after[ruler]:
+                fail(f"{label}: {ruler} differs before/after "
+                     f"(scope: {pol.INTEGRITY_RULERS[ruler]['scope']})")
+                ok = False
+
+    # Canonical viability is EXTERNAL and DERIVED (amendment 4): the
+    # receipt cannot name evidence about the state that contains it, so
+    # V_B searches the evidence chain for a PASS ProspectiveEvaluation
+    # whose staged_state_commit equals the accepted state (the commit
+    # that adds this receipt). Absence never fails the ledger — a bare
+    # clone legitimately has no evidence ref — it reports UNCERTIFIED.
+    if rec.get("canonical_viability") != "EXTERNAL_EVIDENCE":
+        fail(f"{label}: schema-v5 receipts must declare "
+             f"canonical_viability: EXTERNAL_EVIDENCE")
+        ok = False
+    if rec.get("authority_transfer_event") != "PUBLISH_REF_UPDATE":
+        fail(f"{label}: authority_transfer_event is not declared as the "
+             f"publishing ref update")
+        ok = False
+    return "CERTIFIED" if ok else "CERTIFICATION_VIOLATION"
 
 
 # --- record checks -----------------------------------------------------------
@@ -990,6 +1123,18 @@ def main() -> int:
     derived["environment_id"] = environment_id()
     derived.update(b003_bootstrap_discrepancy())
 
+    # Anti-regression law (AUDIT-006 Finding 2): assert mechanically, on
+    # every run, that the typed-probe certification cannot be satisfied by
+    # a visible parent, an ERROR/INCONCLUSIVE outcome, a missing result,
+    # an inert realm, or a weakened privilege contract. Pure computation
+    # over the frozen policy — no execution, R_B-safe.
+    selftest_failures = selftest.run()
+    derived["typed_probe_semantics_selftest"] = \
+        "CLOSED" if not selftest_failures else "OPEN"
+    for f in selftest_failures:
+        fail(f"typed-probe semantics regression: {f}")
+    derived["capability_policy_id"] = pol.POLICY_ID
+
     # G_B evidence: promotion receipts, validated for provenance,
     # chronology, exceptions, and (v3) dual-gate viability.
     receipts, provenance = check_receipts(proposals, grounded)
@@ -1002,6 +1147,10 @@ def main() -> int:
             derived[f"exception_grant_{key[10:]}"] = status
         elif key.startswith("capability_"):
             derived[f"capability_{key[11:]}"] = status
+        elif key.startswith("certification_"):
+            derived[f"certification_{key[14:]}"] = status
+        elif key.startswith("canonviability_"):
+            derived[f"canonical_viability_{key[15:]}"] = status
         else:
             derived[f"receipt_provenance_{key}"] = status
 

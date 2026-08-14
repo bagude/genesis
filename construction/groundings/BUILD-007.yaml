@@ -1,0 +1,128 @@
+proposal: BUILD-007
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-007: PASS
+  scope_conformance_BUILD-007: PASS
+  budget_conformance_BUILD-007: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_exception_grant: NONE
+  reported_no_new_privs: "1"
+  reported_capability_sets_empty: "true"
+  reported_typed_probes_all_pass: "true"
+  reported_false_pass_selftest: CLOSED
+  reported_worktree_digest_equal: "true"
+  reported_object_store_digest_equal: "true"
+  reported_payload_viability_verdict: PASS
+  reported_canonical_viability_verdict: PASS
+  reported_authority_transfer_event: PUBLISH_REF_UPDATE
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+
+observed:
+  proposal_precedence_BUILD-007: PASS
+  scope_conformance_BUILD-007: PASS
+  budget_conformance_BUILD-007: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_exception_grant: NONE
+  reported_no_new_privs: "1"
+  reported_capability_sets_empty: "true"
+  reported_typed_probes_all_pass: "true"
+  reported_false_pass_selftest: CLOSED
+  reported_worktree_digest_equal: "true"
+  reported_object_store_digest_equal: "true"
+  reported_payload_viability_verdict: PASS
+  reported_canonical_viability_verdict: PASS
+  reported_authority_transfer_event: PUBLISH_REF_UPDATE
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+  files_changed_BUILD-007: "18"
+
+unexpected:
+  - >
+    attempt 4 executed the repaired mechanism and was rejected at
+    SUCCESSOR_CANONICAL_VIABLE — the gate this transition introduces —
+    exposing a FIXED-POINT defect in the candidate's own law: the
+    receipt cannot name the canonical-viability evidence, because that
+    evidence is derived from the staged state containing the receipt.
+    Amendment 4 froze the resolution: canonical viability is EXTERNAL
+    and DERIVED, searched from the evidence chain by matching
+    staged_state_commit to the accepted state, reported and never
+    asserted from the receipt. No authority was transferred
+  - >
+    attempt 3 was aborted by an executor procedural error (the ceremony
+    ran the accepted-state promoter instead of the candidate's repaired
+    one); the state it produced was rejected by its own ledger law,
+    which is itself a demonstration of why AUDIT-006 Obligation 4
+    matters. Origin was never advanced; amendment 3 froze the ceremony
+    execution locus
+  - >
+    attempt 1 was rejected at PARENT_ADMITTED because the grounding
+    asserted a new derived key in the transition that introduces it,
+    violating BUILD-004's law-evolution rule; candidate code was never
+    executed, proving the ordering gate holds
+  - >
+    attempt 2 passed both earlier gates but was rejected at
+    SUCCESSOR_CANONICAL_VIABLE as UNEVALUABLE: the staged state was a
+    dangling commit and `git clone --no-local` transfers only
+    ref-reachable objects. Option A therefore requires the staged state
+    to be REF-REACHABLE yet NON-CANONICAL; a staging branch, created
+    for the evaluation window and deleted afterwards, was frozen in
+    bootstrap amendment 2. Under the pre-BUILD-007 architecture this
+    defect would have been discovered only AFTER promotion — the gate
+    AUDIT-006 required is what caught it, with no authority transferred
+  - >
+    the setuid_binary_elevation probe is adversarial rather than
+    vacuous: real setuid binaries (/usr/bin/su, /bin/su, /usr/bin/sudo)
+    ARE reachable inside the realm through the read-only host mounts,
+    and the probe measures that none of them yields uid 0 — the denial
+    comes from no_new_privs plus nosuid, not from the binaries being
+    absent
+  - >
+    the anti-regression for AUDIT-006 Finding 2 was implemented as LAW
+    rather than as a claim: V_B calls selftest_probe_semantics.run() on
+    every invocation (pure computation, no execution, R_B-safe) and
+    fails the ledger if a visible parent, an ERROR/INCONCLUSIVE
+    outcome, a missing probe result, an inert realm, or a weakened
+    privilege contract could ever certify; the same self-test is also
+    registered in tools/probes.yaml for E_B execution by later
+    proposals
+  - >
+    Option A staging required one non-obvious construction: the receipt
+    cannot contain the staged commit's own sha (a commit cannot name
+    itself), so the canonical-viability evidence object records
+    staged_state_commit EXTERNALLY on the evidence ref, and V_B closes
+    the loop by requiring that recorded state to equal the commit that
+    added the receipt — this is what makes Hash(Stage) =
+    Hash(FinalAcceptedState) both true and checkable
+  - >
+    the reported_ keys are fixed-point hypotheses; their authoritative
+    counterparts are the GateResult, PayloadViability, and
+    CanonicalViability evidence objects and the schema-v5 receipt, all
+    certified by V_B from bound evidence rather than from assertion
+
+evidence:
+  audit: construction/audits/AUDIT-006.md
+  bootstrap_authority: construction/audits/BUILD-007-BOOTSTRAP.md
+  proposal_commit: "79042987a5f145d37c194581b2d6248179b4d746"
+  authority_identity_note: derived at ceremony by rule v2; recorded only
+    in evidence objects and the PromotionReceipt, never hand-composed
+  verifier_cmd: python3 tools/verify_construction.py
+
+decision:
+  verdict: REALIZED
+  next: BUILD-008 (Phase 0 — Genesis / contracts), admitted under the
+    accepted BUILD-007 authority mechanism with ExceptionGrant NONE and
+    no bootstrap exception

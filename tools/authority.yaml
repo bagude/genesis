@@ -1,4 +1,4 @@
-# A_t — generational authority manifest. rule v2 (BUILD-006).
+# A_t — generational authority manifest. rule v2 (BUILD-007).
 #
 # The authority object for admitting a candidate is defined by THIS
 # FILE AS IT EXISTS IN THE ACCEPTED CANONICAL COMMIT. Its identity is
@@ -9,10 +9,10 @@
 #
 # The copy of this file inside a candidate is prospective A_{t+1} only
 # and never participates in its own admission. First authoritative use
-# of this version: BUILD-007 admission, read from the accepted
-# BUILD-006 canonical state. BUILD-006 itself was admitted under the
+# of this version: BUILD-008 admission, read from the accepted
+# BUILD-007 canonical state. BUILD-007 itself was admitted under the
 # bootstrap authority frozen in
-# construction/audits/BUILD-006-BOOTSTRAP.md.
+# construction/audits/BUILD-007-BOOTSTRAP.md.
 rule: v2
 operators:
   V_B: tools/verify_construction.py
@@ -21,17 +21,23 @@ operators:
   lib: tools/authority_lib.py
   prospective: tools/prospective.py
   realm_probe: tools/realm_probe.py
+  policy: tools/capability_policy.py
+  selftest: tools/selftest_probe_semantics.py
 members:
+  - path: tools/capability_policy.py
+    blob: 35b5a8df6ede4fccf0768c42d0ec26c8eefc41fe
+  - path: tools/selftest_probe_semantics.py
+    blob: 6d557668a308877dfce9ead971981957e97a1501
   - path: tools/prospective.py
-    blob: 4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4
+    blob: 7568246e57f0c4257ac165194471fd334562e53b
   - path: tools/realm_probe.py
-    blob: a79b5825ab222154cb479bb32e68600c745d61f2
+    blob: a1b2da6b6f6190d8ab7b7194a370c2805c113ed6
   - path: tools/verify_construction.py
-    blob: d9fae90a426b04f74cef1891cc476d3f1af1cdb7
+    blob: 488b0e3ee2926a01ad384eab8fd4edb147431250
   - path: tools/gate.py
     blob: dddce3bb635dce1f02af9ce6ae51b2d777ac83ef
   - path: tools/promote.py
-    blob: f0db87ca90916e48939b61c042b8319eccdf718e
+    blob: 122fe32e3f7c067811d98e45b9be0e553a6e4c27
   - path: tools/authority_lib.py
     blob: 16f86a87489736742c4275933fa5dafb2d3ee7e8
   - path: tools/probes.yaml

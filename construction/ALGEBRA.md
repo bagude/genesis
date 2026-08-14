@@ -1,4 +1,4 @@
-# Construction Algebra — v1.6 (frozen by BUILD-000; amended by BUILD-001..BUILD-006)
+# Construction Algebra — v1.7 (frozen by BUILD-000; amended by BUILD-001..BUILD-007)
 
 ## Principle
 
@@ -383,6 +383,63 @@ Five causal roles, kept as distinct operators: `R_B` measurement,
   externally-ordered platform event exists. Never fails the ledger —
   an isolated clone legitimately lacks the evidence branch. Closed
   records keep their recorded claims; `V_B` derives the honest value.
+
+## Amendment v1.7 — Certification closure (BUILD-007, from AUDIT-006)
+
+> **A causal boundary is certified only when the ruler measures the
+> property the certificate names. A successor is viable only if the
+> state that actually inherits authority is viable under the successor
+> law.**
+>
+> `CapabilityIsolation ≠ CapabilityIsolationEvidence ≠
+> CapabilityIsolationCertification`; `CandidateState ≠ AcceptedState`;
+> a denied effect ≠ a probe that happened to throw an exception.
+
+- **Privilege monotonicity.** Realm entry adds `ro,nosuid,nodev` binds
+  and `setpriv --no-new-privs --bounding-set=-all --inh-caps=-all
+  --ambient-caps=-all`. The privilege state is **measured inside the
+  realm** from `/proc/self/status` (`NoNewPrivs`, `CapInh/Prm/Eff/Bnd/
+  Amb`, uid, gid) and certified against the frozen contract in
+  `tools/capability_policy.py`. Adversarial escalation probes attempt
+  `setuid(0)`, setuid-binary elevation, `mount`, `unshare`, and
+  signalling an out-of-realm process. Claim scope is that lattice only —
+  kernel-exploit and side-channel resistance are **not** claimed.
+- **Typed probe semantics.** Outcomes are `DENIED` / `ALLOWED` /
+  `ERROR` / `INCONCLUSIVE`, decided by per-probe effect predicates;
+  `verdict = PASS` iff observed equals the frozen expected outcome. An
+  arbitrary exception is `ERROR`, never a denial. Visibility probes are
+  positive tests — a visible parent is `ALLOWED` and **fails**. The
+  AUDIT-006 false-pass path is closed by law: `V_B` runs
+  `selftest_probe_semantics.run()` (pure computation) on every
+  invocation and derives `typed_probe_semantics_selftest = CLOSED`.
+- **Ruler/claim correspondence.** Every ruler declares SCOPE and
+  METRIC: `parent_tracked_worktree_digest` (all `git ls-files -s` paths;
+  SHA-256 over mode + content digests — detects uncommitted edits),
+  `parent_object_store_digest` (every file under `.git/objects`;
+  SHA-256 over content digests — detects mutation at equal count),
+  `parent_refs_digest`. Certificates assert
+  `IntegrityBefore(Scope) = IntegrityAfter(Scope)`; the unqualified word
+  "unchanged" is retired. Measurement reads only.
+- **The inheriting state is the verified state (Option A).** After
+  parent admission and payload viability, `P_B` stages commit `S` =
+  candidate + receipt + evidence mirrors via git plumbing (no ref
+  movement), runs canonical viability `V_{t+1}(S)` in the realm, and
+  only then publishes **exactly `S`**. Nothing is appended afterwards,
+  so `Hash(Stage) = Hash(FinalAcceptedState)`; the canonical-viability
+  evidence lives on the evidence ref, external to `S`, which is what
+  makes the fixed point reachable.
+- **Authority-transfer state machine.** `CANDIDATE_FINALIZED →
+  PARENT_ADMITTED → SUCCESSOR_PAYLOAD_VIABLE → FINAL_STATE_STAGED →
+  SUCCESSOR_CANONICAL_VIABLE → AUTHORIZED → PUBLISHED`. The
+  **authority-transfer event is exactly the publishing ref update**;
+  no provisional authority exists before it. Any gate failure ⇒ no ref
+  movement ⇒ PayloadState unchanged, GovernanceLedger appends a
+  RejectionEvent, evidence retained append-only.
+- **Schema-v5 receipts** (mandatory from BUILD-007) bind the policy id,
+  measured privilege state, typed probe results, both integrity digest
+  sets, and **distinct** payload and canonical viability evidence
+  objects; `V_B` certifies from the evidence and requires the
+  canonical-viability target to equal the receipt-adding commit.
 
 ## Bootstrap note
 
