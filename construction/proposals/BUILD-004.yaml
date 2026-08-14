@@ -1,0 +1,150 @@
+proposal: BUILD-004
+phase: -1
+
+goal: >
+  Evidence-provenance closure (AUDIT-003 repair): make the causal chain
+  parent law -> actual evaluation -> authoritative result ->
+  authorization -> promotion -> immutable evidence mechanically real.
+  Authority identities become derived-only under a versioned rule;
+  promotion is causally coupled to actual parent-law execution;
+  receipts become ceremony output evidence, never authorization input;
+  the verifier distinguishes evidence-bound receipts from fabricated
+  claims; pre-promotion chronology gains durable external evidence.
+
+obligations: >
+  Obligation 1 ACCEPTED via design family A+B (causal coupling with
+  independent execution): P_B itself invokes the parent-law evaluation
+  over the exact target and promotes only from that in-process result;
+  P_B accepts no verdict inputs of any kind, so no execution path
+  exists from fabricated PASS data to promotion within the lawful path.
+  Obligation 2 ACCEPTED: object ontology fixed as GateRun (process) ->
+  GateResult (content-addressed evidence object on
+  refs/construction/evidence, emitted by G_B) -> AuthorizationDecision
+  (in-process, produced by P_B from its own GateRun invocation) ->
+  Promote -> PromotionReceipt (post-promotion record referencing the
+  GateResult evidence id) -> PostPromotionAttestation (CI + full-ledger
+  V_B). The receipt is evidence only and never authorizes.
+  Obligation 3 ACCEPTED via reproducibility + evidence binding: V_B
+  validates that a schema-v2 receipt's GateResult evidence object
+  exists on the evidence ref and binds exactly the receipt's
+  target/authority/environment; CI additionally re-executes the
+  parent-law evaluation recorded in the newest receipt and compares
+  verdict and violation set (independent reproduction). A fabricated
+  PASS for a candidate the parent law rejects is thereby mechanically
+  detected.
+  Obligation 4 ACCEPTED: the authorization context binds parent
+  canonical identity, authority identity (rule v2, which itself binds
+  parent canonical + manifest blob + member set), exact candidate
+  commit and tree, environment identity, and the GateResult evidence
+  id. A PASS under A_t cannot authorize under A_{t+1}: the identity
+  changes with the parent state by construction.
+  Obligation 5 ACCEPTED: the GateResult evidence object is committed to
+  refs/construction/evidence and pushed to the remote BEFORE promotion,
+  making Finalize < Evaluate < Authorize < Promote reconstructable from
+  remote ref history and CI timestamps rather than builder prose.
+
+mechanism: >
+  (1) tools/authority_lib.py becomes the single source of truth for:
+  authority identity derivation rule v2 (SHA256 over
+  "authority-rule:v2\n" + "parent:<sha>\n" + "manifest:<blob>\n" +
+  sorted "<blob> <path>" member lines with trailing newline, members
+  verified against the parent canonical tree before hashing),
+  environment identity, and GateResult evidence object read/write on
+  refs/construction/evidence. gate.py, promote.py, and
+  verify_construction.py all import it; no digest is ever manually
+  recorded anywhere.
+  (2) gate.py v2 (G_B) performs the parent-law run and emits the
+  GateResult evidence object (target commit/tree, parent canonical,
+  authority identity + its exact input serialization, verdict,
+  violation set, expected-violation set, environment id, full verifier
+  output). It writes no receipts.
+  (3) promote.py v2 (P_B) takes no verdict or receipt inputs: it
+  invokes G_B in-process over the exact target, pushes the evidence
+  ref, authorizes only from the returned result, performs the atomic
+  expected-old-value fast-forward, then appends the PromotionReceipt
+  (schema_version 2, referencing the evidence object id) in a
+  Construction-Receipt commit. FAIL leaves canonical unchanged and
+  preserves the attempt under construction/rejections/.
+  (4) verify_construction.py v5: receipt law becomes gate-compatible
+  (a closed transition requires a receipt only once canonical history
+  extends past its closure commit); schema-v2 receipts are validated
+  for provenance (evidence object exists, binds target/authority/
+  environment exactly, authority identity recomputed via authority_lib
+  from actual git objects); derived provenance status per transition
+  (BUILD-003: HISTORICAL_UNVERIFIED, never silently normalized;
+  BUILD-004 onward: EVIDENCE_BOUND); the BUILD-003 bootstrap identity
+  discrepancy is surfaced as permanent derived measurements (recorded
+  vs rule-derived value) without mutating closed records; a
+  --reproduce mode re-executes the newest receipt's parent-law
+  evaluation from frozen blobs and compares outcome.
+  (5) CI workflow fetches refs/construction/* and runs both the full
+  ledger verification and --reproduce, remaining attestation, not gate
+  authority.
+  (6) tools/authority.yaml v2 records rule version and member paths
+  with blob identities of the realized artifacts; its identity is
+  always derived contextually, never stored.
+
+bootstrap_admission: >
+  Per construction/audits/BUILD-004-BOOTSTRAP.md: evaluation bundle =
+  the four V_BUILD-003 verifier blobs frozen there, extracted by blob
+  id from the parent canonical (the commit adding this proposal);
+  parent-law verdict rule = PASS iff the violation set equals exactly
+  the single frozen gate-incompatibility violation; GateResult evidence
+  pushed to refs/construction/evidence before promotion; promotion by
+  the executor's expected-old-value update-ref conditioned on the
+  in-session result; no receipt consumed as authority; PromotionReceipt
+  appended afterward as output evidence.
+
+allowed_scope:
+  - construction/
+  - tools/
+  - .github/
+
+prediction:
+  proposal_precedence_BUILD-004: PASS
+  scope_conformance_BUILD-004: PASS
+  budget_conformance_BUILD-004: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_parent_law_expected_violations: "1"
+  reported_prospective_law_verdict: PASS
+  reported_evidence_object: PRESENT
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - provenance is established by evidence binding, pre-promotion remote
+    chronology, and independent reproducibility — not by cryptographic
+    signatures; absent platform-held secrets or branch protection, a
+    fabricated ceremony narrative cannot be made physically impossible,
+    but any receipt whose verdict is not reproducible under its
+    declared authority, or that lacks a bound pre-promotion evidence
+    object, is mechanically detected
+  - capability-level promotion exclusivity remains unenforced until the
+    repository owner enables branch protection; governance remains
+    detection-grade and is stated as such
+  - BUILD-003's records (grounding, receipt, bootstrap) remain
+    immutable; its authority-identity discrepancy remains permanently
+    visible as derived measurements and its receipt provenance status
+    remains HISTORICAL_UNVERIFIED
+  - evidence-object durability depends on the remote retaining
+    refs/construction/*; mirroring evidence into a record namespace is
+    deferred
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-005
+
+deferred:
+  - schema comment updates for receipt/evidence vocabulary (carried
+    from BUILD-003 deferral)
+  - deep re-execution of ALL historical receipts in CI (only the newest
+    is reproduced per run)
+  - platform branch protection and required checks (owner action)
+
+budget:
+  max_files_changed: 14
