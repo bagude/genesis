@@ -1,0 +1,39 @@
+schema: GateResult/1
+transition: BUILD-004
+target_commit: 83873e6441fc004beb76778d251cb658de8e9137
+target_tree: d7f4acfe12743db2e88b1d04a11a97ffe96febeb
+parent_canonical: bfe2fc9fcf2a3cd3aeda9dc918002272ae22371a
+authority_identity: b970394efc9f132155190eb59f1f7ad9ea282c2a4fd953f3a5abaa6bb57adb20
+authority_rule: v2
+authority_serialization: 'authority-rule:v2
+
+  parent:bfe2fc9fcf2a3cd3aeda9dc918002272ae22371a
+
+  manifest:ae4ce9902ed65d660c28d8d1d56b0b240498c612
+
+  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
+
+  3f64881e51f056e15aad059f1020d2afc8498a96 tools/verify_construction.py
+
+  877e358878f788efcc347844fd44aea0766b2501 tools/promote.py
+
+  96f890aa20fb3f6d292f5cfaef6487c048b29017 tools/gate.py
+
+  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
+
+  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
+
+  '
+verdict: FAIL
+exit_code: 1
+violations:
+- 'BUILD-004: closed transition has no promotion receipt (required from BUILD-004)'
+- 'BUILD-004: proposal commit is not a strict ancestor of all realization commits'
+- 'construction/groundings/BUILD-004.yaml.observed: ''proposal_precedence_BUILD-004:
+  PASS'' contradicts derived value ''FAIL'''
+- 'construction/groundings/BUILD-004.yaml.predicted: ''proposal_precedence_BUILD-004:
+  PASS'' contradicts derived value ''FAIL'''
+expected_violations:
+- 'BUILD-004: closed transition has no promotion receipt (required from BUILD-004)'
+environment_id: 05fb1d1e8f917bec
+issuer_note: bootstrap ceremony per construction/audits/BUILD-004-BOOTSTRAP.md
