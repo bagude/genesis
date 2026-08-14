@@ -1,0 +1,30 @@
+transition: BUILD-007
+attempt: 3
+state: ABORTED_EXECUTOR_ERROR
+target_commit: 75061d843b3295b2042d3ad00af9a831b69c3875
+parent_canonical: cceb3f7f0d3007fb07dfa7b9fd43aa0badfc787b
+exception_grant: NONE
+canonical_viability_evidence_object: c8edec1b939285abab99efeb927af8cd52c1f3eb
+root_cause: >
+  executor procedural error, not a candidate defect. The working tree
+  was checked out to the canonical branch before invoking
+  tools/promote.py, so the ACCEPTED-state promoter (v4, BUILD-006 law)
+  executed rather than the candidate's repaired v5 promoter. The v4
+  promoter has no canonical-viability gate and no staging step: it moved
+  the canonical ref and then wrote its receipt commit from the canonical
+  working tree, which reverted the candidate realization in the same
+  commit.
+diagnostic_value: >
+  the resulting state was rejected by its own ledger law (budget
+  exceeded; receipt commit modifying and deleting non-receipt paths),
+  which is precisely the failure mode AUDIT-006 Obligation 4 exists to
+  prevent: a promotion whose final accepted state was never verified.
+  The repaired mechanism stages and verifies that exact state before any
+  ref moves.
+canonical_effect: >
+  local canonical reset to the amended parent cceb3f7; origin was never
+  advanced (no push occurred); PayloadState at origin unchanged
+  throughout. GovernanceLedger appends this rejection.
+disposition: >
+  attempt 4 executes the ceremony from the candidate working tree so the
+  candidate's repaired promoter is the code that runs
