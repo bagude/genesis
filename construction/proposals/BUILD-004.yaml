@@ -1,0 +1,85 @@
+proposal: BUILD-004
+phase: 0
+
+goal: >
+  Establish the difference: Phase 0 (Genesis / contracts). Freeze the
+  meta-ontology of the laboratory realization as a set of typed
+  distinctions, and give every later operator a declared domain and
+  codomain. The content of this transition IS the differences: the
+  substitutions the laboratory must never permit (Proposal !=
+  CandidateAction != Action != Event; WorldState != Observation;
+  Measurement != Grounding; ModelState != WorldState) are declared as
+  contracts before any operator that could conflate them exists. The
+  laboratory namespace (lab/) is created distinct from the construction
+  ledger (construction/), keeping the object-level loop and the
+  build-level loop that constructs it as separate realizations of the
+  shared operator grammar.
+
+allowed_scope:
+  - construction/
+  - lab/
+
+mechanism: >
+  Obligation 1 (meta-ontology frozen): lab/contracts/meta_ontology.md
+  declares the type universe of the runtime loop — ModelState,
+  Proposal, CandidateAction, Action, Event, WorldState, Surface,
+  Observation, Measurement, GroundingRecord — and the frozen
+  distinction pairs between them. Each distinction states which
+  substitution it forbids and which later phase makes that substitution
+  mechanically unavailable. The world substrate contract restates the
+  frozen decision from PHASES.md as types only: causal graph
+  V = {A, B, C}, scalar node states, typed couplings A --gamma_AB--> B
+  --gamma_BC--> C.
+  Obligation 2 (operator contracts): lab/contracts/operators.yaml gives
+  every later operator a declared domain and codomain in terms of the
+  meta-ontology — U_M (model unfold), I_M_W (transduction), Tbar_W
+  (lawful world transition), Pi_E (epistemic surface), R_O (ruler),
+  Pi_G (grounding projection), F_M (model fold) — plus the composition
+  law of the runtime loop. Contracts are declarations; no operator is
+  implemented in this transition.
+  Obligation 3 (deterministic contract check): lab/contracts/
+  check_contracts.py deterministically verifies that every declared
+  operator names a domain and codomain drawn from the declared type
+  universe, that every frozen distinction pair relates two distinct
+  declared types, and that no operator's signature collapses a
+  forbidden pair. Its verdict enters this transition's grounding as
+  reported_contract_law (the parent law derives no such key); under
+  BUILD-003 law it may become derived vocabulary only in a successor
+  transition. Closure of this transition is performed under the
+  BUILD-003 ceremony: candidate branch, parent-law gate (G_B), external
+  GateReceipt, exact-target promotion (P_B) — receipts are law from
+  this transition onward (RECEIPT_REQUIRED_FROM).
+
+prediction:
+  proposal_precedence_BUILD-004: PASS
+  scope_conformance_BUILD-004: PASS
+  budget_conformance_BUILD-004: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_prospective_law_verdict: PASS
+  reported_contract_law: PASS
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - Does not make forbidden substitutions mechanically unavailable in
+    any execution topology; that is Phase 1.
+  - Does not implement the world kernel, reducers, or any executable
+    transition; that is Phase 2. No world.apply(proposal) path exists
+    because no apply path of any kind exists yet.
+  - Does not claim any operator implementation satisfies the declared
+    contracts; there are no implementations.
+  - Does not amend construction law; ALGEBRA.md, the verifier, gate,
+    promotion, schemas, and the probe registry are untouched.
+  - reported_contract_law is a reported measurement, not a derived one;
+    this transition does not extend the parent law's derived
+    vocabulary.
+
+budget:
+  max_files_changed: 8
