@@ -1,0 +1,146 @@
+proposal: BUILD-007
+phase: -1
+
+goal: >
+  Certification closure (AUDIT-006 repair) along four axes, re-derived
+  rather than patched: privilege monotonicity inside the prospective
+  realm; typed causal probe semantics where a denied effect is proven
+  rather than inferred from an exception; ruler/claim correspondence
+  where every certified name states its measured Scope and Metric; and
+  viability of the state that actually inherits authority, via exact
+  final-state staging with an explicit authority-transfer boundary.
+
+obligations: >
+  Obligation 1 ACCEPTED (privilege monotonicity): realm entry adds
+  no_new_privs, empty inheritable/ambient/bounding capability sets, and
+  nosuid,nodev bind semantics. The privilege state is MEASURED inside
+  the realm from /proc/self/status (NoNewPrivs, CapInh, CapPrm, CapEff,
+  CapBnd, CapAmb, uid, gid) and certified against the frozen contract.
+  Adversarial escalation probes attempt: setuid-binary elevation
+  (su/sudo/mount if present), file-capability elevation, capability
+  acquisition, unshare/mount from inside, and ptrace of an out-of-realm
+  pid — each must be DENIED. Claim scope is the declared capability
+  lattice only; kernel-exploit and side-channel resistance are NOT
+  claimed.
+  Obligation 2 ACCEPTED (typed probe semantics): the generic
+  "exception means denied" wrapper is deleted. Every probe is a
+  declaration (probe_id, attempted_effect, expected_outcome, predicate)
+  returning exactly one observed_outcome in {DENIED, ALLOWED, ERROR,
+  INCONCLUSIVE} with evidence, and verdict PASS iff observed equals
+  expected. Visibility probes are positive tests: a visible parent is
+  ALLOWED and therefore FAILS. Unexpected exceptions yield ERROR (FAIL),
+  never DENIED. A self-test asserts the false-pass path is closed: a
+  simulated visible parent must FAIL certification.
+  Obligation 3 ACCEPTED (ruler/claim correspondence): HEAD^{tree} and
+  object-count rulers are replaced by content digests with declared
+  scope — parent_tracked_worktree_digest over every `git ls-files -s`
+  path (mode + sha256 of bytes), parent_object_store_digest over every
+  regular file under .git/objects (sha256 of bytes), parent_refs_digest
+  over for-each-ref lines. Names assert IntegrityBefore(Scope) =
+  IntegrityAfter(Scope); the word "unchanged" without Scope and Metric
+  is retired. Measurement reads only and never mutates the protected
+  state.
+  Obligation 4 ACCEPTED via OPTION A (exact final-state staging): after
+  parent admission and payload viability, the executor/promoter builds
+  commit S on top of the candidate containing the receipt and evidence
+  mirrors — the exact would-be accepted state — and runs canonical
+  viability V_{t+1}(S) inside the realm BEFORE any canonical mutation.
+  Publication fast-forwards canonical to exactly S and appends nothing
+  further, so Hash(Stage) = Hash(FinalAcceptedState) by construction.
+  The CanonicalViability evidence object lives on the evidence branch,
+  external to S, avoiding the self-reference that would otherwise make
+  the fixed point unreachable.
+  AUTHORITY TRANSFER: the state machine CANDIDATE_FINALIZED ->
+  PARENT_ADMITTED -> SUCCESSOR_PAYLOAD_VIABLE -> FINAL_STATE_STAGED ->
+  SUCCESSOR_CANONICAL_VIABLE -> AUTHORIZED -> PUBLISHED is frozen, and
+  the authority-transfer event is exactly the atomic expected-old-value
+  update-ref publishing S. No provisional authority transfer occurs
+  earlier; a failed gate leaves PayloadState unchanged with evidence
+  retained append-only.
+
+mechanism: >
+  tools/capability_policy.py (new): the frozen privilege contract,
+  integrity-ruler definitions with scope/metric, and typed probe
+  declarations as data — one authority for what is claimed and how it is
+  measured, imported by the evaluator, the in-realm runner, and V_B so
+  no second implementation can drift. tools/realm_probe.py v2: executes
+  typed probes (no exception-to-denial coercion), reads the privilege
+  state from /proc/self/status, runs the payload or canonical viability
+  target, and emits typed results. tools/prospective.py v3: builds the
+  realm with nosuid/nodev binds and the non-escalation setpriv flags,
+  computes the three integrity digests before/after, certifies probes
+  and privilege against the frozen policy, and supports evaluating
+  EITHER the candidate payload or a staged commit (canonical viability)
+  through the same bounded surface. tools/promote.py v4: stages S,
+  gates canonical viability, then publishes S atomically as the single
+  authority-transfer event. tools/verify_construction.py v8: schema-v5
+  receipt law requiring typed probe verdicts all PASS, the measured
+  privilege state matching the frozen contract, the three integrity
+  digests equal before/after, distinct payload and canonical viability
+  evidence objects, and the accepted-state identity equal to the
+  receipt-adding commit; capability certification continues to be read
+  FROM bound evidence, never from receipt assertion. CI distinguishes
+  exact reproduction, semantic conformance, and unavailable capability
+  primitive, without claiming realm reproduction.
+
+allowed_scope:
+  - construction/
+  - tools/
+  - .github/
+
+prediction:
+  proposal_precedence_BUILD-007: PASS
+  scope_conformance_BUILD-007: PASS
+  budget_conformance_BUILD-007: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_exception_grant: NONE
+  reported_no_new_privs: "1"
+  reported_capability_sets_empty: "true"
+  reported_typed_probes_all_pass: "true"
+  reported_false_pass_selftest: CLOSED
+  reported_worktree_digest_equal: "true"
+  reported_object_store_digest_equal: "true"
+  reported_payload_viability_verdict: PASS
+  reported_canonical_viability_verdict: PASS
+  reported_authority_transfer_event: PUBLISH_REF_UPDATE
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - privilege monotonicity is claimed only within the declared
+    capability lattice (uid/gid, no_new_privs, capability sets, nosuid
+    mounts); kernel-exploit resistance, side-channel isolation, and
+    VM-grade isolation are NOT claimed
+  - the integrity rulers certify equality over their declared scopes
+    only; untracked files, ignored paths, timestamps, and .git internals
+    outside .git/objects and refs are explicitly out of scope
+  - Option A staging guarantees Hash(Stage) = Hash(FinalAcceptedState)
+    for THIS transition's canonical branch; it does not prevent a later
+    unauthorized direct push from changing canonical afterwards
+    (branch protection remains an owner action)
+  - remote CI cannot construct the namespace realm; it performs
+    parent-law reproduction, semantic conformance, and evidence
+    integrity only, and reports the capability primitive as unavailable
+    rather than claiming realm reproduction
+  - chronology remains REMOTE_EVIDENCE_PRESENT with pre-promotion
+    ordering UNATTESTED for all transitions
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-008
+
+deferred:
+  - platform branch protection / required checks (owner action)
+  - a VM- or gVisor-class isolation upgrade
+  - externally-ordered pre-promotion chronology attestation
+  - schema comment updates for the new vocabulary (carried deferral)
+
+budget:
+  max_files_changed: 18
