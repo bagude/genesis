@@ -1,9 +1,37 @@
-schema: CanonicalViabilityAttempt/1
+schema: GateResult/1
 transition: BUILD-007
-attempt: 2
-staged_state_commit: 13b4442d5654cb58aa59579a2f1b11ff891cd386
-target_commit: 00b2bbe086527b77a00ecf90e1d660026da11e36
-verdict: UNEVALUABLE
-reason: staged commit is not reachable from any ref, so the independent --no-local
-  clone cannot transfer it; canonical viability could not be evaluated
+target_commit: 75061d843b3295b2042d3ad00af9a831b69c3875
+target_tree: 5880fdeb9d358878ed4cbecc79a608119f2f0eb3
+parent_canonical: cceb3f7f0d3007fb07dfa7b9fd43aa0badfc787b
+authority_identity: 2de6af03ff269e7b30150196657cf5f05e7b048c2bdd1b387eadee95ae01d077
+authority_rule: v2
+authority_serialization: 'authority-rule:v2
+
+  parent:cceb3f7f0d3007fb07dfa7b9fd43aa0badfc787b
+
+  manifest:e1fc99d4a7cbbebdf12f4bf9ca04f56579218299
+
+  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
+
+  16f86a87489736742c4275933fa5dafb2d3ee7e8 tools/authority_lib.py
+
+  4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4 tools/prospective.py
+
+  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
+
+  a79b5825ab222154cb479bb32e68600c745d61f2 tools/realm_probe.py
+
+  d9fae90a426b04f74cef1891cc476d3f1af1cdb7 tools/verify_construction.py
+
+  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
+
+  dddce3bb635dce1f02af9ce6ae51b2d777ac83ef tools/gate.py
+
+  f0db87ca90916e48939b61c042b8319eccdf718e tools/promote.py
+
+  '
+verdict: PASS
+exit_code: 0
+violations: []
+expected_violations: []
 environment_id: 05fb1d1e8f917bec
