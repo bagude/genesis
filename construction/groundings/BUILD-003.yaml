@@ -1,0 +1,56 @@
+proposal: BUILD-003
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-003: PASS
+  scope_conformance_BUILD-003: PASS
+  budget_conformance_BUILD-003: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_prospective_law_verdict: PASS
+
+observed:
+  proposal_precedence_BUILD-003: PASS
+  scope_conformance_BUILD-003: PASS
+  budget_conformance_BUILD-003: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_prospective_law_verdict: PASS
+  files_changed_BUILD-003: "11"
+
+unexpected:
+  - the two pre-realization constraint records (PRE-AUDIT-003 and
+    PRE-AUDIT-003-BOOTSTRAP) were not anticipated by the frozen
+    proposal and are attributed to this transition, consuming 4 of the
+    12 budgeted files before realization began; planned schema comment
+    updates were deferred to a later proposal to respect the frozen
+    budget
+  - per PRE-AUDIT-003, the reported_ gate keys in this record are
+    fixed-point hypotheses about the gate run on exactly this
+    candidate; the authoritative verdicts live only in the external
+    GateReceipt appended post-promotion under construction/receipts/,
+    and the verifier reconciles these echoes against that receipt
+
+evidence:
+  audit: construction/audits/AUDIT-002.md
+  pre_audit: construction/audits/PRE-AUDIT-003.md
+  bootstrap_authority: construction/audits/PRE-AUDIT-003-BOOTSTRAP.md
+  proposal_commit: "7c90a23f4986cde1dd375d7e70402aba07086cfc"
+  parent_authority_identity: "a498931e482a1022e03f80f3291d75f28177363e5f65ee05d42a1a10a69ad4ac"
+  verifier_cmd: python3 tools/verify_construction.py
+
+decision:
+  verdict: REALIZED
+  next: BUILD-004 (Phase 0 — Genesis / contracts), admitted under
+    tools/authority.yaml at the accepted BUILD-003 canonical state
+

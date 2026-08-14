@@ -1,0 +1,31 @@
+# A_t — generational authority manifest (BUILD-003, PRE-AUDIT-003).
+#
+# The authority object A_t = (V_t, G_t, P_t, manifest) for admitting a
+# candidate is defined by THIS FILE AS IT EXISTS IN THE ACCEPTED
+# CANONICAL COMMIT. G_B reads it from the canonical tree via git
+# plumbing and verifies each member's blob identity before use. The
+# copy of this file inside a candidate is prospective A_{t+1} only and
+# never participates in selecting or validating A_t for that
+# candidate's own admission (candidate_manifest_rule).
+#
+# First authoritative use: defining A_t for BUILD-004 admission, read
+# from the accepted BUILD-003 canonical state. BUILD-003 itself was
+# admitted under the bootstrap authority frozen in
+# construction/audits/PRE-AUDIT-003-BOOTSTRAP.md.
+operators:
+  V_B: tools/verify_construction.py
+  G_B: tools/gate.py
+  P_B: tools/promote.py
+members:
+  - path: tools/verify_construction.py
+    blob: 3f64881e51f056e15aad059f1020d2afc8498a96
+  - path: tools/gate.py
+    blob: 96f890aa20fb3f6d292f5cfaef6487c048b29017
+  - path: tools/promote.py
+    blob: 877e358878f788efcc347844fd44aea0766b2501
+  - path: tools/probes.yaml
+    blob: 01eb084c0d6b856d5b80da368abad96d2cf7e57b
+  - path: construction/schemas/build_proposal.schema.yaml
+    blob: a706e30ba7dae9bd17b6114144bbe3d2a123d870
+  - path: construction/schemas/build_grounding.schema.yaml
+    blob: dcadfd1efa6a3981883b570a876c58662ef74ddc

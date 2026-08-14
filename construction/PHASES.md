@@ -6,8 +6,8 @@ observer-independent coordinate: `World -> Surface -> Ruler`.
 
 | Phase | Name                                  | Exit condition (canonical)                                             | Status      |
 |-------|---------------------------------------|------------------------------------------------------------------------|-------------|
-| -1    | Construction algebra                  | Verifier enforces proposal/grounding law over the construction ledger   | REALIZED (BUILD-000; AUDIT-000 repair via BUILD-001; AUDIT-001 governance closure via BUILD-002) |
-| 0     | Genesis / contracts                   | Every later operator has a declared domain and codomain; meta-ontology frozen | PENDING (BUILD-003) |
+| -1    | Construction algebra                  | Verifier enforces proposal/grounding law over the construction ledger   | REALIZED (BUILD-000; AUDIT-000 repair via BUILD-001; AUDIT-001 governance closure via BUILD-002; AUDIT-002/PRE-AUDIT-003 trust-boundary closure via BUILD-003) |
+| 0     | Genesis / contracts                   | Every later operator has a declared domain and codomain; meta-ontology frozen | PENDING (BUILD-004) |
 | 1     | Ontology separation                   | Proposal ≠ CandidateAction ≠ Action ≠ Event; WorldState ≠ Observation; Measurement ≠ Grounding; ModelState ≠ WorldState — mechanically unavailable substitutions | PENDING |
 | 2     | Deterministic world kernel            | Replay(w0, L_gov) = w_live for every generated legal sequence; Adm=0 ⇒ w' = w while ledger appends e_reject | PENDING |
 | 3     | Epistemic surfaces                    | Two observers over the same world receive different surfaces: Π_E^A(w) ≠ Π_E^B(w) | PENDING |

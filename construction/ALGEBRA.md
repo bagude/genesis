@@ -1,4 +1,4 @@
-# Construction Algebra — v1.2 (frozen by BUILD-000; amended by BUILD-001, BUILD-002)
+# Construction Algebra — v1.3 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003)
 
 ## Principle
 
@@ -177,6 +177,55 @@ ledger with the proposal commit of the transition that answers them.
   `evidence.proposal_commit` must equal the full 40-hex derived commit
   id exactly. BUILD-001's prefix relation is grandfathered as a closed
   record.
+
+## Amendment v1.3 — Trust-boundary closure (BUILD-003, from AUDIT-002 / PRE-AUDIT-003)
+
+> **A candidate that contains V_{t+1} may not use V_{t+1} as the
+> authority that admits itself.**
+
+Five causal roles, kept as distinct operators: `R_B` measurement,
+`E_B` experiment, `V_B` verification (tools/verify_construction.py),
+`G_B` authorization (tools/gate.py), `P_B` promotion (tools/promote.py).
+
+- **Parent-law authorization.** `Accept(C_{t+1}) ⇒ V_t(C_{t+1}) = PASS`.
+  `G_B` reads `tools/authority.yaml` from the ACCEPTED CANONICAL commit
+  (never from the candidate), verifies member blob identities against
+  the canonical tree, extracts exactly those members, and runs the
+  parent verifier against the candidate's exact commit. The candidate's
+  own law runs prospectively only. Law evolution without
+  self-authorization: a candidate's grounding stays within the parent
+  law's derived vocabulary; novel measurements enter as `reported_`
+  once and become derived only for successors.
+- **Fixed-point candidate + external GateReceipt.** In-candidate
+  `reported_` gate keys are fixed-point hypotheses, never authority.
+  The receipt is external to the candidate, binds
+  `target_commit`/`target_tree`/`authority_identity`/verdicts/
+  `environment_id`/probe evidence, and is what `P_B` consumes.
+  Exact-target invariant: `Promote(C') ⇒ C' = receipt.target_commit`
+  by full-SHA equality, with an atomic expected-old-value ref move.
+- **Candidate/canonical separation.** Candidates live on
+  `candidate/BUILD-NNN`; gate FAIL leaves canonical untouched and the
+  attempt is preserved under `construction/rejections/`. CI on
+  canonical is attestation, not authorization. Post-promotion, the
+  receipt is appended under `construction/receipts/` in a receipt-only
+  commit (trailer `Construction-Receipt: BUILD-NNN`, additions only,
+  receipt namespaces only, excluded from transition attribution) —
+  the authorized consequence of the promotion ceremony.
+- **Closure-bound experiment evidence.** From BUILD-003, a transition's
+  probe keys are matched against the evidence bound in its GateReceipt
+  at closure; a present-time rerun is attestation and never redefines
+  historical evidence. `experiment_tree_isolation` is narrowed to
+  `authoritative_tree_status_preserved` (alias retained for closed
+  records); `environment_id` is a first-class derived identity of the
+  runtime surface.
+- **Receipts are law from BUILD-004** (`RECEIPT_REQUIRED_FROM`);
+  BUILD-003 is the declared bootstrap transition, its admission
+  performed under the authority frozen in
+  `construction/audits/PRE-AUDIT-003-BOOTSTRAP.md`.
+- **Promotion exclusivity is law-with-detection, not prevention:**
+  canonical mutations bypassing `P_B` are detected as permanent ledger
+  violations; capability-level prevention requires platform branch
+  protection (declared governance limitation).
 
 ## Bootstrap note
 

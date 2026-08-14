@@ -38,6 +38,8 @@ Stdlib + pyyaml only, by declaration of BUILD-000/001/002.
 
 from __future__ import annotations
 
+import hashlib
+import platform
 import re
 import subprocess
 import sys
@@ -50,17 +52,28 @@ ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = ROOT / "construction" / "schemas"
 PROPOSALS = ROOT / "construction" / "proposals"
 GROUNDINGS = ROOT / "construction" / "groundings"
+RECEIPTS = ROOT / "construction" / "receipts"
 REGISTRY = ROOT / "tools" / "probes.yaml"
 
 RECORD_NAMESPACES = ("construction/proposals/", "construction/groundings/",
-                     "construction/audits/")
-IMPLICIT_SCOPE = RECORD_NAMESPACES
+                     "construction/audits/", "construction/receipts/",
+                     "construction/rejections/")
+IMPLICIT_SCOPE = ("construction/proposals/", "construction/groundings/",
+                  "construction/audits/")
+RECEIPT_COMMIT_SCOPE = ("construction/receipts/", "construction/rejections/")
 PROPOSAL_COMMIT_SCOPE = ("construction/proposals/", "construction/audits/")
 TRAILER_RE = re.compile(r"^Construction-Transition:\s*(BUILD-\d{3})\s*$",
+                        re.MULTILINE)
+RECEIPT_RE = re.compile(r"^Construction-Receipt:\s*(BUILD-\d{3})\s*$",
                         re.MULTILINE)
 FORMAT2_FROM = 1        # first proposal whose grounding must be format 2
 CANONICAL_ID_FROM = 2   # first proposal requiring full-SHA evidence identity
 REGISTRY_ONLY_FROM = 2  # first proposal whose probes are names, not specs
+RECEIPT_BOUND_FROM = 3  # first proposal whose receipt (if present) is
+                        # closure-binding for gate verdicts and probes;
+                        # BUILD-003 is the declared bootstrap
+RECEIPT_REQUIRED_FROM = 4  # first proposal whose closed grounding MUST
+                           # have a promotion receipt
 
 FAILURES: list[str] = []
 
@@ -145,6 +158,12 @@ def commit_trailer(sha: str) -> str | None:
     return match.group(1) if match else None
 
 
+def receipt_trailer(sha: str) -> str | None:
+    body = git("show", "-s", "--format=%B", sha)
+    match = RECEIPT_RE.search(body)
+    return match.group(1) if match else None
+
+
 def adding_commit(relpath: str) -> str | None:
     out = git("log", "--diff-filter=A", "--format=%H", "--", relpath)
     lines = [line for line in out.split("\n") if line]
@@ -185,6 +204,16 @@ def attribute_commits(pids: list[str]) -> dict[str, set[str]]:
 
 
 # --- experiments (E_B: registry-resolved, isolated) -------------------------
+
+def environment_id() -> str:
+    """First-class environment identity (AUDIT-002 secondary finding):
+    fingerprints the language runtime and library surface, not the OS
+    image (declared BUILD-003 non-claim)."""
+    fingerprint = (f"python={platform.python_version()}"
+                   f"|system={platform.system()}"
+                   f"|pyyaml={yaml.__version__}")
+    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
+
 
 def load_registry() -> dict[str, dict]:
     if not REGISTRY.exists():
@@ -258,6 +287,10 @@ def run_experiments(probe_names: set[str],
                        capture_output=True, cwd=ROOT)
     after = git("status", "--porcelain")
     isolated = "PASS" if before == after else "FAIL"
+    # Narrowed name (AUDIT-002 secondary finding): the measured invariant
+    # is authoritative-tree STATUS preservation, nothing stronger. The
+    # old key remains as a derived alias so closed records keep matching.
+    results["authoritative_tree_status_preserved"] = isolated
     results["experiment_tree_isolation"] = isolated
     if isolated != "PASS":
         fail("experiment phase altered the authoritative tree status")
@@ -365,12 +398,25 @@ def measure_globals(boundary: str | None, enforce: bool) -> dict[str, str]:
                 fail(f"lifecycle: OPEN proposal {open_[0]} is not the "
                      f"highest-numbered ({newest})")
 
-    # Untracked commits beyond the measurement-law boundary.
+    # Untracked commits beyond the measurement-law boundary. A commit is
+    # tracked by a Construction-Transition trailer OR by a
+    # Construction-Receipt trailer (the authorized post-promotion
+    # append, restricted to the receipt namespaces, additions only).
     law_boundary = adding_commit("construction/groundings/BUILD-001.yaml")
     untracked = 0
     if law_boundary is not None and law_boundary in set(commits):
         for sha in commits:
             if sha == law_boundary or not is_strict_ancestor(law_boundary, sha):
+                continue
+            rcpt = receipt_trailer(sha)
+            if rcpt is not None:
+                for status, f in commit_name_status(sha):
+                    if not status.startswith("A") or \
+                            not f.startswith(RECEIPT_COMMIT_SCOPE):
+                        if enforce:
+                            fail(f"commit {sha[:7]}: receipt commit performs "
+                                 f"'{status}' on {f}; receipt commits may "
+                                 f"only add under {RECEIPT_COMMIT_SCOPE}")
                 continue
             if commit_trailer(sha) is None:
                 untracked += 1
@@ -430,6 +476,43 @@ def measure_globals(boundary: str | None, enforce: bool) -> dict[str, str]:
     }
 
 
+# --- promotion receipts (G_B evidence, closure-bound) ------------------------
+
+def check_receipts(proposals: dict[str, dict], grounded: set[str]) -> dict[str, dict]:
+    """Validate GateReceipts: exact-target binding to the transition's
+    final (grounding-adding) commit, PASS verdict, authority identity
+    present. Required for closed transitions >= RECEIPT_REQUIRED_FROM;
+    BUILD-003's receipt is the declared bootstrap (validated when
+    present, not law-required)."""
+    receipts: dict[str, dict] = {}
+    if RECEIPTS.exists():
+        for path in sorted(RECEIPTS.glob("*.yaml")):
+            pid = path.stem
+            rec = load_yaml(path)
+            label = str(path.relative_to(ROOT))
+            if pid not in proposals:
+                fail(f"{label}: receipt for unknown proposal '{pid}'")
+                continue
+            receipts[pid] = rec
+            boundary = adding_commit(f"construction/groundings/{pid}.yaml")
+            target = rec.get("target_commit")
+            if boundary is not None and target != boundary:
+                fail(f"{label}: target_commit '{target}' does not equal the "
+                     f"transition's final commit '{boundary}' "
+                     f"(exact-target invariant)")
+            if rec.get("parent_law_verdict") != "PASS":
+                fail(f"{label}: promoted receipt carries parent_law_verdict "
+                     f"'{rec.get('parent_law_verdict')}'")
+            if not rec.get("authority_identity"):
+                fail(f"{label}: missing authority_identity")
+    for pid in sorted(grounded):
+        if pid in proposals and pid_number(pid) >= RECEIPT_REQUIRED_FROM \
+                and pid not in receipts:
+            fail(f"{pid}: closed transition has no promotion receipt "
+                 f"(required from BUILD-{RECEIPT_REQUIRED_FROM:03d})")
+    return receipts
+
+
 # --- record checks -----------------------------------------------------------
 
 def check_proposal(path: Path, schema: dict) -> dict:
@@ -460,7 +543,8 @@ def check_measured_keys(mapping: dict, derived: dict[str, str],
 
 def check_grounding(path: Path, schema: dict, proposals: dict[str, dict],
                     derived_head: dict[str, str],
-                    globals_cache: dict[str | None, dict[str, str]]) -> None:
+                    globals_cache: dict[str | None, dict[str, str]],
+                    receipts: dict[str, dict]) -> None:
     rec = load_yaml(path)
     label = str(path.relative_to(ROOT))
     check_required(rec, schema["required"], label)
@@ -478,6 +562,18 @@ def check_grounding(path: Path, schema: dict, proposals: dict[str, dict],
         globals_cache[boundary] = measure_globals(boundary, enforce=False)
     derived = dict(derived_head)
     derived.update(globals_cache[boundary])
+
+    # Closure-bound experiment evidence (AUDIT-002 obligation 3): from
+    # RECEIPT_BOUND_FROM, a transition's probe keys are matched against
+    # the evidence its GateReceipt bound at closure — a present-time
+    # rerun never silently redefines historical evidence. Legacy
+    # transitions (< BUILD-003) remain matched against the present
+    # rerun (grandfathered).
+    receipt = receipts.get(pid)
+    if receipt is not None and pid_number(pid) >= RECEIPT_BOUND_FROM:
+        evidence = receipt.get("probe_evidence")
+        if isinstance(evidence, dict):
+            derived.update({k: str(v) for k, v in evidence.items()})
 
     predicted = rec.get("predicted")
     if predicted != proposals[pid].get("prediction"):
@@ -511,6 +607,19 @@ def check_grounding(path: Path, schema: dict, proposals: dict[str, dict],
                 elif not true_commit.startswith(ref):
                     fail(f"{label}: evidence.proposal_commit '{ref}' does "
                          f"not match derived commit '{true_commit}'")
+            # Reported gate verdicts are non-authoritative echoes: they
+            # must reconcile with the external receipt (PRE-AUDIT-003
+            # point 4), which is what P_B actually consumed.
+            if receipt is not None and isinstance(observed, dict):
+                for gkey, rkey in (
+                        ("reported_parent_law_verdict", "parent_law_verdict"),
+                        ("reported_prospective_law_verdict",
+                         "prospective_law_verdict")):
+                    if gkey in observed and \
+                            observed[gkey] != receipt.get(rkey):
+                        fail(f"{label}: '{gkey}: {observed[gkey]}' does not "
+                             f"reconcile with receipt {rkey} "
+                             f"'{receipt.get(rkey)}'")
 
     decision = rec.get("decision")
     if isinstance(decision, dict):
@@ -553,6 +662,10 @@ def main() -> int:
                                          pid in grounded))
     now_globals = measure_globals(None, enforce=True)
     derived.update(now_globals)
+    derived["environment_id"] = environment_id()
+
+    # G_B evidence: promotion receipts (external authority records).
+    receipts = check_receipts(proposals, grounded)
 
     # E_B: experiments, registry-resolved, isolated.
     probe_names: set[str] = set()
@@ -564,7 +677,7 @@ def main() -> int:
     globals_cache: dict[str | None, dict[str, str]] = {None: now_globals}
     for path in grounding_paths:
         check_grounding(path, grounding_schema, proposals, derived,
-                        globals_cache)
+                        globals_cache, receipts)
 
     for key in sorted(derived):
         print(f"derived {key} = {derived[key]}")
