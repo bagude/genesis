@@ -1,0 +1,25 @@
+transition: BUILD-004
+attempt: 1
+target_commit: 83873e6441fc004beb76778d251cb658de8e9137
+parent_canonical: bfe2fc9fcf2a3cd3aeda9dc918002272ae22371a
+authority_identity: b970394efc9f132155190eb59f1f7ad9ea282c2a4fd953f3a5abaa6bb57adb20
+verdict: FAIL
+frozen_expected_violations:
+  - "BUILD-004: closed transition has no promotion receipt (required from BUILD-004)"
+observed_violations:
+  - "BUILD-004: closed transition has no promotion receipt (required from BUILD-004)"
+  - "BUILD-004: proposal commit is not a strict ancestor of all realization commits"
+  - "construction/groundings/BUILD-004.yaml.observed: 'proposal_precedence_BUILD-004: PASS' contradicts derived value 'FAIL'"
+  - "construction/groundings/BUILD-004.yaml.predicted: 'proposal_precedence_BUILD-004: PASS' contradicts derived value 'FAIL'"
+evidence_object: fbcee211bcd71e8c7da60389bc49556f28bd22f0
+evidence_location: >
+  local refs/construction/evidence only; remote ref push denied by
+  platform push policy (HTTP 403); evidence meta mirrored in
+  construction/audits/BUILD-004-BOOTSTRAP-AMENDMENT-1.md
+root_cause: >
+  parent law V_BUILD-003 cannot represent pre-proposal audit-record
+  commits (the AUDIT-003 protocol ordering archive -> bootstrap ->
+  proposal), and the candidate's own v5 carried the same precedence
+  defect; the frozen single-violation verdict rule was therefore wrong
+  and the gate correctly rejected the candidate
+canonical_effect: unchanged (bfe2fc9 at rejection time)
