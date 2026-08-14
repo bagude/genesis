@@ -1,0 +1,64 @@
+receipt: PromotionReceipt
+schema_version: 5
+transition: BUILD-007
+target_commit: d4be1948669334b7e39da14e1604119424e8fd75
+target_tree: bb31f672b42f96e7be64132d46cbbf82f429ba69
+parent_canonical: a22d8ad388dd3d03b919106e38176acea9bda317
+authority_identity: 2d9b174436b7a9638e08bdd58a164a92a7b01437f690cc164fefc39b70533f44
+authority_rule: v2
+evidence_object: 8aaf45287216cad01dbad86d78a1531b2f14589b
+payload_viability_evidence_object: 8d308348e9a68ec6a203252018265a93b17ce8f8
+parent_law_verdict: PASS
+expected_violations: []
+exception_grant: NONE
+successor_payload_viability_verdict: PASS
+canonical_viability: EXTERNAL_EVIDENCE
+capability_policy_id: realm/v2:unshare-mn+ro-nosuid-nodev-binds+chroot+setpriv-65534+no-new-privs+empty-caps
+capability_policy_blob: 35b5a8df6ede4fccf0768c42d0ec26c8eefc41fe
+privilege_measured:
+  uid: '65534'
+  gid: '65534'
+  euid: '65534'
+  egid: '65534'
+  CapInh: '0000000000000000'
+  CapPrm: '0000000000000000'
+  CapEff: '0000000000000000'
+  CapBnd: '0000000000000000'
+  CapAmb: '0000000000000000'
+  NoNewPrivs: '1'
+capability_envelope:
+  storage_hardlinks: '0'
+  remotes: '0'
+  no_new_privs: '1'
+  realm_uid: '65534'
+  parent_tracked_worktree_digest_equal: 'true'
+  parent_object_store_digest_equal: 'true'
+  parent_refs_digest_equal: 'true'
+  probe_parent_repo_visibility: DENIED
+  probe_write_parent_worktree_file: DENIED
+  probe_write_parent_ref: DENIED
+  probe_write_parent_git_config: DENIED
+  probe_write_parent_git_object: DENIED
+  probe_write_ro_usr: DENIED
+  probe_write_ro_etc: DENIED
+  probe_write_realm_root: DENIED
+  probe_forbidden_env_present: DENIED
+  probe_network_connect: DENIED
+  probe_setuid_root_syscall: DENIED
+  probe_setuid_binary_elevation: DENIED
+  probe_mount_from_realm: DENIED
+  probe_unshare_from_realm: DENIED
+  probe_signal_host_process: DENIED
+  probe_write_scratch: ALLOWED
+integrity_before:
+  parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
+  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
+  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
+integrity_after:
+  parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
+  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
+  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
+chronology_status: REMOTE_EVIDENCE_PRESENT
+prepromotion_chronology: UNATTESTED
+authority_transfer_event: PUBLISH_REF_UPDATE
+environment_id: 05fb1d1e8f917bec

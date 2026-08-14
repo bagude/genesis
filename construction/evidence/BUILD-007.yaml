@@ -1,0 +1,37 @@
+schema: GateResult/1
+transition: BUILD-007
+target_commit: d4be1948669334b7e39da14e1604119424e8fd75
+target_tree: bb31f672b42f96e7be64132d46cbbf82f429ba69
+parent_canonical: a22d8ad388dd3d03b919106e38176acea9bda317
+authority_identity: 2d9b174436b7a9638e08bdd58a164a92a7b01437f690cc164fefc39b70533f44
+authority_rule: v2
+authority_serialization: 'authority-rule:v2
+
+  parent:a22d8ad388dd3d03b919106e38176acea9bda317
+
+  manifest:e1fc99d4a7cbbebdf12f4bf9ca04f56579218299
+
+  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
+
+  16f86a87489736742c4275933fa5dafb2d3ee7e8 tools/authority_lib.py
+
+  4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4 tools/prospective.py
+
+  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
+
+  a79b5825ab222154cb479bb32e68600c745d61f2 tools/realm_probe.py
+
+  d9fae90a426b04f74cef1891cc476d3f1af1cdb7 tools/verify_construction.py
+
+  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
+
+  dddce3bb635dce1f02af9ce6ae51b2d777ac83ef tools/gate.py
+
+  f0db87ca90916e48939b61c042b8319eccdf718e tools/promote.py
+
+  '
+verdict: PASS
+exit_code: 0
+violations: []
+expected_violations: []
+environment_id: 05fb1d1e8f917bec
