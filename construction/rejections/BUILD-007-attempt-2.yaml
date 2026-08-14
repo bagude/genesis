@@ -1,0 +1,31 @@
+transition: BUILD-007
+attempt: 2
+state: CANONICAL_VIABILITY_UNEVALUABLE
+target_commit: 00b2bbe086527b77a00ecf90e1d660026da11e36
+staged_state_commit: 13b4442d5654cb58aa59579a2f1b11ff891cd386
+parent_canonical: 5219eac1d62f48abe1cc5987f1debda394211a9b
+authority_identity: 51bb64704052d7e9696d7738aeabdfa9954260d4c4a52f93e4f58d6afa5dfdb2
+exception_grant: NONE
+parent_law_verdict: PASS
+parent_gate_evidence_object: 94b26a97b8758481a32e137d8b3b2f74b5652733
+successor_payload_viability_verdict: PASS
+payload_viability_evidence_object: 29c622d32eba567ed71688cb28ec063cda4c86a8
+successor_canonical_viability_verdict: UNEVALUABLE
+canonical_viability_evidence_object: 48f9da75fcd220a8f44899dacff5718df736ceca
+root_cause: >
+  the candidate's promote.py stages the would-be accepted state as a
+  dangling commit reachable from no ref. The prospective evaluator
+  obtains its independent substrate with git clone --no-local, which
+  transfers only ref-reachable objects, so the staged state could not be
+  materialized inside the realm and canonical viability could not be
+  evaluated at all. Option A staging therefore requires the staged state
+  to be ref-reachable (via a non-canonical staging ref) before it can be
+  independently evaluated. The defect is in the candidate's promoter,
+  not in the privilege, probe, or ruler repairs, all of which were
+  certified PASS in this attempt.
+canonical_effect: >
+  PayloadState unchanged; the canonical ref never moved and no authority
+  was transferred at any point. GovernanceLedger appends this rejection.
+  Gate and payload-viability evidence for this attempt are retained
+  append-only on the evidence branch.
+disposition: staging ref mechanism added in attempt 3 under bootstrap amendment 2
