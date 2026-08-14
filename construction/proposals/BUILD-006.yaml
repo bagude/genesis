@@ -1,0 +1,135 @@
+proposal: BUILD-006
+phase: -1
+
+goal: >
+  Capability-isolation closure (AUDIT-005 repair): unaccepted successor
+  code executes over storage causally independent of the parent
+  writable substrate, inside a mechanically bounded filesystem/process
+  realm, with denials proven by adversarial probes rather than inferred
+  from benign behavior; the certified capability envelope is derived
+  from the bound prospective evidence object; remote attestation
+  reproduces both gates; chronology terminology is downgraded to match
+  the evidence actually available.
+
+obligations: >
+  Obligation 1 ACCEPTED: prospective substrate is a git clone
+  --no-local --no-hardlinks of the parent at the exact candidate
+  commit, origin removed; storage independence is adversarially tested
+  (0 hard-linked objects; a write from inside the realm cannot reach
+  parent objects).
+  Obligation 2 ACCEPTED: candidate code executes inside a realm built
+  by unshare -m -n + read-only bind mounts of system dirs + chroot +
+  setpriv to uid 65534, so the parent repository path is absent,
+  host system dirs are read-only, only a scratch /work is writable,
+  and network is denied. Declared contract:
+  K_write(parent_repo)=∅, K_write(governance_state)=∅,
+  K_write(host_outside_scratch)=∅, network=∅, credentials=∅.
+  Obligation 3 ACCEPTED: tools/prospective.py runs an adversarial probe
+  battery inside the same realm (attempt to see/write parent repo,
+  parent refs, parent .git/config, parent objects, forbidden env,
+  network, host paths outside scratch) plus host-after invariants
+  (parent refs, worktree sentinel digest, object count unchanged);
+  viability PASS requires candidate-verifier PASS AND every forbidden
+  effect DENIED AND every host-after invariant intact.
+  Obligation 4 ACCEPTED: the receipt references viability_evidence_
+  object; V_B reads the certified capability_envelope and
+  adversarial_probes from that evidence object and, if the receipt
+  duplicates them, requires exact canonical equality
+  (CertifiedCapabilityEnvelope = CapabilityEnvelope(BoundEvidence)).
+  Evidence binds candidate identity, evaluator identity+blob,
+  capability-policy identity, environment id, measured effects,
+  viability verdict.
+  Obligation 5 ACCEPTED: CI reproduces both gates. Parent law is
+  re-executed and compared as before. Successor viability is
+  re-evaluated with field typing: invariant fields (target_commit,
+  viability verdict, violation set, forbidden-effect DENIED set) must
+  match; environment-relative fields (uid, kernel, mount details) are
+  informational. Where CI lacks namespace privilege to build the realm,
+  it runs the declared conformance probe (independent --no-local clone,
+  candidate-verifier verdict/violations compared) and reports
+  isolation-primitive availability rather than claiming identical
+  reproduction.
+  Obligation 6 ACCEPTED: REMOTE_PRE_PROMOTION is retired. Derived
+  chronology becomes REMOTE_EVIDENCE_PRESENT (graph membership) with a
+  separate prepromotion_chronology status UNATTESTED; BUILD-005's
+  closed receipt is not mutated but its derived chronology is retyped
+  to the honest value.
+
+mechanism: >
+  tools/prospective.py v2: builds the independent substrate and the
+  isolation realm, runs the candidate verifier and the adversarial
+  probe battery inside it, measures host-after invariants, and emits a
+  ProspectiveEvaluation evidence object carrying capability_policy_id
+  (blob of prospective.py), evaluator identity, capability_envelope,
+  adversarial_probes, and verdict. If realm construction is
+  unavailable (no privilege), it returns verdict UNAVAILABLE with the
+  reason, never a false PASS. verify_construction.py v7: derives the
+  certified envelope from bound viability evidence and requires
+  receipt/evidence equality; adds schema-v4 receipt law (adversarial
+  probe set present and all-denied; capability_policy_id bound);
+  retypes chronology (REMOTE_EVIDENCE_PRESENT + prepromotion UNATTESTED
+  as derived vocabulary, closed records untouched); --reproduce covers
+  parent and, where possible, successor conformance. gate.py/promote.py
+  updated for schema-v4 receipts and the v2 evaluator. authority.yaml
+  updated to realized blobs. CI workflow reproduces both gates with the
+  conformance fallback. BUILD-006's own admission runs the FROZEN
+  bootstrap realm procedure (BUILD-006-BOOTSTRAP), not the candidate's
+  isolation claim; BUILD-007 uses the accepted tools with no exception.
+
+allowed_scope:
+  - construction/
+  - tools/
+  - .github/
+
+prediction:
+  proposal_precedence_BUILD-006: PASS
+  scope_conformance_BUILD-006: PASS
+  budget_conformance_BUILD-006: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_successor_viability_verdict: PASS
+  reported_exception_grant: NONE
+  reported_storage_hardlinks: "0"
+  reported_probe_write_parent_repo: DENIED
+  reported_probe_write_parent_refs: DENIED
+  reported_probe_network: DENIED
+  reported_host_parent_unchanged: "true"
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - the realm is namespace/chroot/unprivileged-uid isolation on a
+    shared kernel, not a VM or a security-audited container runtime;
+    kernel-level exploits and side channels are out of scope (declared
+    limitation)
+  - the frozen contract certifies K_write over parent repo, governance
+    state, and host paths outside scratch, and network denial; it does
+    not claim CPU/memory/time bounding or defense against a kernel
+    compromise
+  - CI may lack privilege to construct the realm; there it runs the
+    declared conformance probe and reports isolation availability
+    rather than claiming identical reproduction
+  - chronology is REMOTE_EVIDENCE_PRESENT; pre-promotion ordering
+    remains UNATTESTED for all transitions until an externally-ordered
+    platform event is available; BUILD-005 and earlier stay as recorded
+  - branch protection remains an external owner limitation; promotion
+    exclusivity is detection, not prevention
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-007
+
+deferred:
+  - platform branch protection / required checks (owner action)
+  - a VM- or gVisor-class isolation upgrade beyond namespace+chroot
+  - externally-ordered pre-promotion chronology attestation
+  - schema comment updates for the new vocabulary (carried deferral)
+
+budget:
+  max_files_changed: 16
