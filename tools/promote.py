@@ -1,31 +1,44 @@
 #!/usr/bin/env python3
-"""P_B — Promotion. v2 (BUILD-004, AUDIT-003 repair).
+"""P_B — Promotion. v3 (BUILD-005, AUDIT-004 repair).
 
-CAUSAL COUPLING: this tool takes NO verdict, receipt, or evidence
-inputs. It invokes the parent-law GateRun itself (G_B, in-process) over
-the exact target and authorizes only from that actual result. There is
-therefore no execution path from fabricated PASS data to promotion
-within the lawful path: the only thing that can satisfy the
-authorization condition is the parent law actually returning PASS,
-here, on this exact commit.
+NO POLICY ARGUMENTS. The caller cannot supply expected, accepted,
+ignored, or waived failures, nor alternate verdict rules. The effective
+decision rule is:
 
-Sequence (AUDIT-003 obligation 2 ontology):
+    EffectiveDecisionRule = BaseDecisionRule (zero expected violations)
+                            ⊕ AuthorizedExceptionGrant
 
-    GateRun (invoked here) -> GateResult (evidence object, pushed to
-    the remote evidence ref BEFORE promotion) -> AuthorizationDecision
-    (in-process, from the returned result only) -> Promote (atomic
-    expected-old-value fast-forward, exact-target full-SHA equality)
-    -> PromotionReceipt (schema_version 2, referencing the GateResult
-    evidence id — OUTPUT evidence of this ceremony, never an input)
-    -> PostPromotionAttestation (CI / full-ledger V_B, separate).
+where the grant, if any, is resolved by G_B from the ACCEPTED parent
+canonical tree (construction/exceptions/<transition>.yaml). The invoker
+of P_B cannot mint one.
 
-FAIL leaves canonical unchanged; the failed run's evidence object is
-preserved on the evidence ref and the attempt is recorded under
-construction/rejections/.
+Dual gate (AUDIT-004 obligation 3): promotion requires
 
-Capability note (unchanged, no overclaim): this is the only LAWFUL
-path onto canonical; preventing unlawful direct pushes requires
-platform branch protection.
+    ParentLaw(C) = PASS  AND  SuccessorViability(C) = PASS
+
+Parent evaluation runs first and executes only accepted-law code over
+candidate data; parent FAIL rejects WITHOUT ever executing candidate
+code. Successor viability runs the candidate's own law strictly inside
+the bounded CapabilityEnvelope (tools/prospective.py): isolated
+credential-free clone, minimal environment, OS-enforced network
+denial, measured evidence. The parent remains the admitting authority;
+the successor never authorizes itself — but a successor that cannot
+validate its own proposed accepted state does not become the next
+authority.
+
+Payload vs governance ledger (AUDIT-004 obligation 5):
+
+    Reject(C)  => PayloadState' = PayloadState
+                  GovernanceLedger' = GovernanceLedger ⊕ RejectionEvent
+    Promote(C) => PayloadState' = CandidatePayload
+
+A rejection DOES advance the canonical commit (the ledger append); it
+never changes the payload coordinate. This tool says exactly that.
+
+Chronology (AUDIT-004 obligation 4, Option A): evidence objects are
+pushed to the remote governance branch claude/genesis-evidence BEFORE
+promotion; if that push fails the receipt's chronology_status is
+downgraded to CHRONOLOGY_UNATTESTED explicitly, never silently.
 """
 
 from __future__ import annotations
@@ -38,8 +51,10 @@ import yaml
 
 import authority_lib as lib
 import gate
+import prospective
 
 ROOT = lib.ROOT
+EVIDENCE_BRANCH = "claude/genesis-evidence"
 
 
 def append_record(branch: str, files: dict[str, str], trailer: str) -> None:
@@ -53,105 +68,136 @@ def append_record(branch: str, files: dict[str, str], trailer: str) -> None:
     lib.git("commit", "-m", f"Append {names}\n\n{trailer}")
 
 
+def push_evidence() -> str:
+    """Best-effort pre-promotion push of the evidence chain to the
+    remote governance BRANCH (non-branch ref pushes are platform-
+    denied). Returns the chronology status this ceremony can honestly
+    claim."""
+    try:
+        lib.git("push", "origin",
+                f"{lib.EVIDENCE_REF}:refs/heads/{EVIDENCE_BRANCH}")
+        return "REMOTE_PRE_PROMOTION"
+    except RuntimeError as exc:
+        print(f"warning: evidence branch push failed: {exc}")
+        return "CHRONOLOGY_UNATTESTED"
+
+
+def reject(canonical: str, transition: str, records: dict) -> None:
+    n = 1
+    while (ROOT / "construction" / "rejections" /
+           f"{transition}-attempt-{n}.yaml").exists():
+        n += 1
+    append_record(
+        canonical,
+        {f"construction/rejections/{transition}-attempt-{n}.yaml":
+            yaml.safe_dump(records, sort_keys=False)},
+        f"Construction-Receipt: {transition}")
+    print("REJECT: payload state unchanged; governance ledger appended "
+          "the rejection event")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--canonical", required=True)
     ap.add_argument("--candidate", required=True)
     ap.add_argument("--transition", required=True)
-    ap.add_argument("--expect-violation", action="append", default=[])
     args = ap.parse_args()
 
     canonical_sha = lib.git("rev-parse", f"refs/heads/{args.canonical}")
     candidate_sha = lib.git("rev-parse", f"{args.candidate}^{{commit}}")
-
     if lib.git("merge-base", canonical_sha, candidate_sha) != canonical_sha:
-        print("REJECT: candidate is not a fast-forward of canonical; "
-              "canonical unchanged")
+        print("REJECT: candidate is not a fast-forward of canonical")
         return 1
 
-    # GateRun — the actual parent-law execution, invoked by P_B itself.
-    result = gate.run_parent_law(canonical_sha, candidate_sha,
-                                 args.expect_violation, args.transition)
-    evidence_id = result["evidence_object"]
+    # Decision rule from accepted authority only.
+    expected, grant_id = gate.resolve_exception_grant(canonical_sha,
+                                                      args.transition)
 
-    # Pre-promotion durability: the evidence object is committed to the
-    # local evidence ref before any canonical mutation. Remote ref push
-    # is best-effort — the platform may deny non-branch ref pushes
-    # (BUILD-004-BOOTSTRAP-AMENDMENT-1); remote durability is then
-    # provided by the in-history mirror appended with the receipt.
-    try:
-        lib.git("push", "origin", f"{lib.EVIDENCE_REF}:{lib.EVIDENCE_REF}")
-        evidence_pushed = "yes"
-    except RuntimeError as exc:
-        evidence_pushed = "no (platform ref-push policy)"
-        print(f"warning: evidence ref push denied: {exc}")
-    print(f"evidence object: {evidence_id} (remote push: {evidence_pushed})")
-
-    prospective = gate.run_parent_law(candidate_sha, candidate_sha,
-                                      transition=args.transition,
-                                      emit_evidence=False)
-
-    if result["verdict"] != "PASS":
-        rejection = {
+    # Gate 1: parent admission (accepted code over candidate data).
+    parent = gate.run_parent_law(canonical_sha, candidate_sha,
+                                 expected, args.transition)
+    chronology = push_evidence()
+    if parent["verdict"] != "PASS":
+        reject(args.canonical, args.transition, {
             "transition": args.transition,
             "target_commit": candidate_sha,
             "parent_canonical": canonical_sha,
-            "authority_identity": result["authority_identity"],
-            "verdict": result["verdict"],
-            "violations": result["violations"],
-            "evidence_object": evidence_id,
-        }
-        n = 1
-        while (ROOT / "construction" / "rejections" /
-               f"{args.transition}-attempt-{n}.yaml").exists():
-            n += 1
-        append_record(
-            args.canonical,
-            {f"construction/rejections/{args.transition}-attempt-{n}.yaml":
-                yaml.safe_dump(rejection, sort_keys=False)},
-            f"Construction-Receipt: {args.transition}")
-        print(f"REJECT: parent law verdict {result['verdict']}; canonical "
-              f"unchanged; attempt preserved with evidence {evidence_id}")
+            "authority_identity": parent["authority_identity"],
+            "parent_law_verdict": parent["verdict"],
+            "violations": parent["violations"],
+            "exception_grant": grant_id,
+            "successor_viability_verdict":
+                "NOT_EVALUATED (parent FAIL: candidate code not executed)",
+            "evidence_object": parent["evidence_object"],
+            "chronology_status": chronology,
+        })
         return 1
 
-    # AuthorizationDecision: in-process, from the actual result only.
-    # Exact-target + authority-context binding, then atomic ref move.
-    assert result["target_commit"] == candidate_sha
+    # Gate 2: successor viability, bounded capability surface only.
+    viability = prospective.evaluate(candidate_sha, args.transition)
+    viability_meta = {k: v for k, v in viability.items() if k != "output"}
+    viability_evidence = lib.write_evidence(viability_meta,
+                                            viability["output"])
+    chronology = push_evidence()
+    if viability["verdict"] != "PASS":
+        reject(args.canonical, args.transition, {
+            "transition": args.transition,
+            "target_commit": candidate_sha,
+            "parent_canonical": canonical_sha,
+            "parent_law_verdict": parent["verdict"],
+            "successor_viability_verdict": viability["verdict"],
+            "viability_violations": viability["violations"],
+            "capability_envelope": viability["capability_envelope"],
+            "exception_grant": grant_id,
+            "evidence_object": parent["evidence_object"],
+            "viability_evidence_object": viability_evidence,
+            "chronology_status": chronology,
+        })
+        return 1
+
+    # AuthorizationDecision: both actual results, in-process.
+    assert parent["target_commit"] == candidate_sha
     lib.git("update-ref", f"refs/heads/{args.canonical}",
             candidate_sha, canonical_sha)
-    print(f"PROMOTED {args.canonical}: {canonical_sha[:12]} -> "
+    print(f"PROMOTED {args.canonical}: payload {canonical_sha[:12]} -> "
           f"{candidate_sha[:12]}")
 
     receipt = {
         "receipt": "PromotionReceipt",
-        "schema_version": 2,
+        "schema_version": 3,
         "transition": args.transition,
         "target_commit": candidate_sha,
-        "target_tree": result["target_tree"],
+        "target_tree": parent["target_tree"],
         "parent_canonical": canonical_sha,
-        "authority_identity": result["authority_identity"],
-        "authority_rule": result["authority_rule"],
-        "evidence_object": evidence_id,
-        "evidence_ref_pushed": evidence_pushed,
-        "parent_law_verdict": result["verdict"],
-        "expected_violations": result["expected_violations"],
-        "prospective_law_verdict": prospective["verdict"],
-        "environment_id": result["environment_id"],
+        "authority_identity": parent["authority_identity"],
+        "authority_rule": parent["authority_rule"],
+        "evidence_object": parent["evidence_object"],
+        "viability_evidence_object": viability_evidence,
+        "parent_law_verdict": parent["verdict"],
+        "expected_violations": parent["expected_violations"],
+        "exception_grant": grant_id,
+        "successor_viability_verdict": viability["verdict"],
+        "capability_envelope": viability["capability_envelope"],
+        "chronology_status": chronology,
+        "environment_id": parent["environment_id"],
     }
-    # Mirror must byte-equal the evidence object's meta: the object was
-    # serialized before the evidence id and output were attached.
-    output = result["output"]
-    evidence_meta = {k: v for k, v in result.items()
-                     if k not in ("output", "evidence_object")}
+    parent_meta = {k: v for k, v in parent.items()
+                   if k not in ("output", "evidence_object")}
     append_record(
         args.canonical,
         {f"construction/receipts/{args.transition}.yaml":
             yaml.safe_dump(receipt, sort_keys=False),
          f"construction/evidence/{args.transition}.yaml":
-            yaml.safe_dump(evidence_meta, sort_keys=False),
-         f"construction/evidence/{args.transition}.log": output},
+            yaml.safe_dump(parent_meta, sort_keys=False),
+         f"construction/evidence/{args.transition}.log": parent["output"],
+         f"construction/evidence/{args.transition}-viability.yaml":
+            yaml.safe_dump(viability_meta, sort_keys=False),
+         f"construction/evidence/{args.transition}-viability.log":
+            viability["output"]},
         f"Construction-Receipt: {args.transition}")
-    print(f"receipt + evidence mirror appended (evidence {evidence_id})")
+    print(f"receipt + evidence mirrors appended "
+          f"(gate {parent['evidence_object'][:12]}, "
+          f"viability {viability_evidence[:12]})")
     return 0
 
 

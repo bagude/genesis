@@ -60,12 +60,16 @@ REGISTRY = ROOT / "tools" / "probes.yaml"
 
 RECORD_NAMESPACES = ("construction/proposals/", "construction/groundings/",
                      "construction/audits/", "construction/receipts/",
-                     "construction/rejections/", "construction/evidence/")
+                     "construction/rejections/", "construction/evidence/",
+                     "construction/exceptions/")
 IMPLICIT_SCOPE = ("construction/proposals/", "construction/groundings/",
-                  "construction/audits/")
+                  "construction/audits/", "construction/exceptions/")
 RECEIPT_COMMIT_SCOPE = ("construction/receipts/", "construction/rejections/",
                         "construction/evidence/")
-PROPOSAL_COMMIT_SCOPE = ("construction/proposals/", "construction/audits/")
+PROPOSAL_COMMIT_SCOPE = ("construction/proposals/", "construction/audits/",
+                         "construction/exceptions/")
+EVIDENCE_BRANCH_REFS = ("refs/remotes/origin/claude/genesis-evidence",
+                        "refs/heads/claude/genesis-evidence")
 TRAILER_RE = re.compile(r"^Construction-Transition:\s*(BUILD-\d{3})\s*$",
                         re.MULTILINE)
 RECEIPT_RE = re.compile(r"^Construction-Receipt:\s*(BUILD-\d{3})\s*$",
@@ -78,6 +82,9 @@ RECEIPT_BOUND_FROM = 3  # first proposal whose receipt (if present) is
                         # BUILD-003 is the declared bootstrap
 RECEIPT_REQUIRED_FROM = 4  # first proposal whose closed grounding MUST
                            # have a promotion receipt
+RECEIPT_V3_FROM = 5     # first proposal requiring schema-v3 receipts:
+                        # dual-gate viability, capability envelope,
+                        # typed chronology, explicit exception field
 
 FAILURES: list[str] = []
 
@@ -562,13 +569,21 @@ def check_receipts(proposals: dict[str, dict],
             if not rec.get("authority_identity"):
                 fail(f"{label}: missing authority_identity")
 
-            if rec.get("schema_version", 1) >= 2:
+            schema_v = rec.get("schema_version", 1)
+            if schema_v >= 2:
                 provenance[pid] = check_receipt_provenance(label, rec)
+                provenance[f"chronology_{pid}"] = \
+                    check_receipt_chronology(label, rec)
             else:
                 # BUILD-003-era receipt: content observable, provenance
                 # not mechanically reconstructable (AUDIT-003). Never
                 # silently normalized.
                 provenance[pid] = "HISTORICAL_UNVERIFIED"
+                provenance[f"chronology_{pid}"] = "CHRONOLOGY_UNATTESTED"
+            provenance[f"exception_{pid}"] = \
+                check_receipt_exception(label, rec)
+            if pid_number(pid) >= RECEIPT_V3_FROM:
+                check_receipt_v3(label, rec, schema_v)
     for pid in sorted(grounded):
         if pid not in proposals or pid_number(pid) < RECEIPT_REQUIRED_FROM \
                 or pid in receipts:
@@ -639,7 +654,102 @@ def check_receipt_provenance(label: str, rec: dict) -> str:
             sorted(rec.get("expected_violations") or []):
         fail(f"{label}: evidence expected_violations do not bind receipt")
         ok = False
-    return "EVIDENCE_BOUND" if ok else "EVIDENCE_CONFLICT"
+    # AUDIT-004 finding 4: this binding proves mirror/content
+    # consistency and reproducibility — NOT pre-promotion chronology.
+    # The name says exactly what is established.
+    return "MIRROR_BOUND" if ok else "EVIDENCE_CONFLICT"
+
+
+def check_receipt_chronology(label: str, rec: dict) -> str:
+    """Typed chronology (AUDIT-004 obligation 4). REMOTE_PRE_PROMOTION
+    is honored only when the receipt claims it AND the gate evidence
+    commit is contained in the governance evidence branch; otherwise
+    the status is CHRONOLOGY_UNATTESTED. Reproduction is a separate
+    property (--reproduce), never conflated with chronology."""
+    claimed = rec.get("chronology_status")
+    if claimed != "REMOTE_PRE_PROMOTION":
+        return "CHRONOLOGY_UNATTESTED"
+    evidence_id = rec.get("evidence_object", "")
+    for ref in EVIDENCE_BRANCH_REFS:
+        try:
+            tip = git("rev-parse", "--verify", "--quiet", ref)
+        except RuntimeError:
+            continue
+        if evidence_id and is_ancestor_or_equal(evidence_id, tip):
+            return "REMOTE_PRE_PROMOTION"
+    fail(f"{label}: claims REMOTE_PRE_PROMOTION but the gate evidence "
+         f"commit is not contained in any evidence branch ref")
+    return "CHRONOLOGY_UNATTESTED"
+
+
+def check_receipt_exception(label: str, rec: dict) -> str:
+    """Exception law (AUDIT-004 obligation 1): a nonempty expected set
+    is lawful only under an AuthorizedExceptionGrant that existed in
+    the ACCEPTED parent canonical tree, or as the grandfathered
+    BUILD-004 bootstrap-amendment exception (closed record)."""
+    pid = rec.get("transition") or ""
+    expected = rec.get("expected_violations") or []
+    grant_id = rec.get("exception_grant", "NONE")
+    if pid == "BUILD-004" or (not pid and "BUILD-004" in label):
+        return "HISTORICAL_BOOTSTRAP_AMENDMENT"
+    if rec.get("schema_version", 1) < 3:
+        return "NONE" if not expected else "UNGOVERNED"
+    if not expected and grant_id == "NONE":
+        return "NONE"
+    if not expected or grant_id == "NONE":
+        fail(f"{label}: expected_violations and exception_grant disagree")
+        return "INCONSISTENT"
+    parent = rec.get("parent_canonical", "")
+    rel = f"construction/exceptions/{pid}.yaml"
+    try:
+        blob = git("rev-parse", f"{parent}:{rel}")
+        grant = yaml.safe_load(git("show", f"{parent}:{rel}"))
+    except RuntimeError:
+        fail(f"{label}: claims grant '{grant_id}' but {rel} does not "
+             f"exist in the parent canonical tree")
+        return "UNAUTHORIZED"
+    if blob != grant_id:
+        fail(f"{label}: exception_grant '{grant_id}' does not match the "
+             f"grant blob '{blob}' in parent state")
+        return "UNAUTHORIZED"
+    if sorted(str(v) for v in grant.get("exception_set") or []) != \
+            sorted(str(v) for v in expected):
+        fail(f"{label}: expected_violations differ from the authorized "
+             f"grant's exception_set")
+        return "UNAUTHORIZED"
+    return grant_id
+
+
+def check_receipt_v3(label: str, rec: dict, schema_v: int) -> None:
+    """Dual-gate and capability law for BUILD-005+ receipts."""
+    if schema_v < 3:
+        fail(f"{label}: proposals >= BUILD-{RECEIPT_V3_FROM:03d} require "
+             f"schema_version >= 3 receipts")
+        return
+    if rec.get("successor_viability_verdict") != "PASS":
+        fail(f"{label}: promoted receipt lacks successor viability PASS "
+             f"(dual-gate law)")
+    envelope = rec.get("capability_envelope")
+    if not isinstance(envelope, dict):
+        fail(f"{label}: missing capability_envelope evidence")
+        return
+    for key, want in (("network_denied", "true"), ("remotes", "0"),
+                      ("real_repo_refs_unchanged", "true")):
+        if str(envelope.get(key)) != want:
+            fail(f"{label}: capability_envelope.{key} = "
+                 f"'{envelope.get(key)}' (required '{want}')")
+    pid = rec.get("transition", Path(label).stem)
+    try:
+        vmeta = read_evidence_any(f"{pid}-viability",
+                                  {"evidence_object":
+                                   rec.get("viability_evidence_object")})
+    except RuntimeError as exc:
+        fail(f"{label}: viability evidence unreadable: {exc}")
+        return
+    if vmeta.get("target_commit") != rec.get("target_commit"):
+        fail(f"{label}: viability evidence target does not bind receipt")
+    if vmeta.get("verdict") != rec.get("successor_viability_verdict"):
+        fail(f"{label}: viability evidence verdict does not bind receipt")
 
 
 # --- record checks -----------------------------------------------------------
@@ -794,10 +904,27 @@ def main() -> int:
     derived["environment_id"] = environment_id()
     derived.update(b003_bootstrap_discrepancy())
 
-    # G_B evidence: promotion receipts, validated for provenance.
+    # G_B evidence: promotion receipts, validated for provenance,
+    # chronology, exceptions, and (v3) dual-gate viability.
     receipts, provenance = check_receipts(proposals, grounded)
-    for pid, status in provenance.items():
-        derived[f"receipt_provenance_{pid}"] = status
+    for key, status in provenance.items():
+        if key.startswith("chronology_"):
+            derived[f"receipt_chronology_{key[11:]}"] = status
+        elif key.startswith("exception_"):
+            derived[f"exception_grant_{key[10:]}"] = status
+        else:
+            derived[f"receipt_provenance_{key}"] = status
+
+    # Payload vs governance ledger (AUDIT-004 obligation 5):
+    # CanonicalState = (PayloadState, GovernanceLedger). The payload
+    # coordinate is the tree of the newest PROMOTED candidate; ledger
+    # appends (receipts, rejections, evidence, audits) advance the
+    # commit without moving the payload coordinate.
+    derived["governance_ledger_head"] = git("rev-parse", "HEAD")
+    newest_receipt = max(receipts, key=pid_number) if receipts else None
+    if newest_receipt:
+        derived["payload_state"] = \
+            receipts[newest_receipt].get("target_tree", "")
 
     # E_B: experiments, registry-resolved, isolated.
     probe_names: set[str] = set()

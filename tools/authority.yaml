@@ -1,4 +1,4 @@
-# A_t — generational authority manifest. rule v2 (BUILD-004).
+# A_t — generational authority manifest. rule v2 (BUILD-005).
 #
 # The authority object for admitting a candidate is defined by THIS
 # FILE AS IT EXISTS IN THE ACCEPTED CANONICAL COMMIT. Its identity is
@@ -9,23 +9,26 @@
 #
 # The copy of this file inside a candidate is prospective A_{t+1} only
 # and never participates in its own admission. First authoritative use
-# of this version: BUILD-005 admission, read from the accepted
-# BUILD-004 canonical state. BUILD-004 itself was admitted under the
+# of this version: BUILD-006 admission, read from the accepted
+# BUILD-005 canonical state. BUILD-005 itself was admitted under the
 # bootstrap authority frozen in
-# construction/audits/BUILD-004-BOOTSTRAP.md.
+# construction/audits/BUILD-005-BOOTSTRAP.md.
 rule: v2
 operators:
   V_B: tools/verify_construction.py
   G_B: tools/gate.py
   P_B: tools/promote.py
   lib: tools/authority_lib.py
+  prospective: tools/prospective.py
 members:
+  - path: tools/prospective.py
+    blob: 59cb24ffb764380da5dd430bc2b2fe26e2012442
   - path: tools/verify_construction.py
-    blob: 0ea005fad49f746216d00aea21cc25053aa00704
+    blob: 8cd98124de2fb00a428e5f13edbbe2d8af67f0f3
   - path: tools/gate.py
-    blob: 7ae5c10dfa06b8c6f6f1822eb69e96c31388a170
+    blob: dddce3bb635dce1f02af9ce6ae51b2d777ac83ef
   - path: tools/promote.py
-    blob: 4803c84eedbea42f0c5ca5f41c236f8c868fc5f7
+    blob: df4f32ca0b6d85e2b264b1b41776ff04c631605f
   - path: tools/authority_lib.py
     blob: 16f86a87489736742c4275933fa5dafb2d3ee7e8
   - path: tools/probes.yaml

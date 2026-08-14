@@ -32,12 +32,40 @@ import authority_lib as lib
 ROOT = lib.ROOT
 
 
+def resolve_exception_grant(parent_canonical: str,
+                            transition: str) -> tuple[list[str], str]:
+    """Resolve the AuthorizedExceptionGrant for a transition from the
+    ACCEPTED parent canonical tree — the only lawful source of a
+    nonempty expected-violation set (AUDIT-004 obligation 1). Returns
+    (exception_set, grant_identity) where grant_identity is the grant
+    file's blob sha, or ([], "NONE") when no grant exists. The invoker
+    of P_B cannot mint a grant: it must already be part of accepted
+    authority state."""
+    rel = f"construction/exceptions/{transition}.yaml"
+    try:
+        blob = lib.git("rev-parse", f"{parent_canonical}:{rel}")
+    except RuntimeError:
+        return [], "NONE"
+    grant = __import__("yaml").safe_load(
+        lib.git("show", f"{parent_canonical}:{rel}"))
+    exception_set = grant.get("exception_set")
+    if not isinstance(exception_set, list):
+        raise RuntimeError(f"{rel}: grant has no exception_set list")
+    return sorted(str(v) for v in exception_set), blob
+
+
 def run_parent_law(parent_canonical: str, candidate: str,
                    expected_violations: list[str] | None = None,
                    transition: str = "?",
                    emit_evidence: bool = True) -> dict:
     """Execute the parent law over the exact candidate commit. Returns
-    the GateResult dict (including evidence commit id if emitted)."""
+    the GateResult dict (including evidence commit id if emitted).
+
+    `expected_violations` carries authority ONLY when it came from
+    resolve_exception_grant (parent state) — G_B and P_B never accept
+    it from a caller. V_B may pass a receipt's recorded set when
+    REPRODUCING a historical evaluation; reproduction compares, it
+    never authorizes."""
     expected = sorted(expected_violations or [])
     authority = lib.derive_authority_identity(parent_canonical)
     candidate_sha = lib.git("rev-parse", f"{candidate}^{{commit}}")
@@ -92,15 +120,20 @@ def run_parent_law(parent_canonical: str, candidate: str,
 
 
 def main() -> int:
+    # No policy arguments exist: the decision rule belongs to accepted
+    # authority (base rule: zero expected violations), modified only by
+    # an ExceptionGrant already present in the parent canonical tree.
     ap = argparse.ArgumentParser()
     ap.add_argument("--canonical", required=True)
     ap.add_argument("--candidate", required=True)
     ap.add_argument("--transition", default="?")
-    ap.add_argument("--expect-violation", action="append", default=[])
     args = ap.parse_args()
 
+    expected, grant_id = resolve_exception_grant(args.canonical,
+                                                 args.transition)
     result = run_parent_law(args.canonical, args.candidate,
-                            args.expect_violation, args.transition)
+                            expected, args.transition)
+    result["exception_grant"] = grant_id
     print(f"gate: verdict={result['verdict']} "
           f"target={result['target_commit'][:12]} "
           f"authority={result['authority_identity'][:16]} "

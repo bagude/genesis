@@ -1,4 +1,4 @@
-# Construction Algebra — v1.4 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003, BUILD-004)
+# Construction Algebra — v1.5 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003, BUILD-004, BUILD-005)
 
 ## Principle
 
@@ -284,6 +284,59 @@ Five causal roles, kept as distinct operators: `R_B` measurement,
   remote chronology, and reproducibility — not signatures. Promotion
   exclusivity remains detection, not prevention, until platform branch
   protection exists.
+
+## Amendment v1.5 — Decision-rule and capability closure (BUILD-005, from AUDIT-004)
+
+> **An evaluator's authority includes the decision rule it was
+> granted, not an arbitrary decision rule supplied by the actor
+> requesting the evaluation. Unaccepted executable code acquires no
+> causal authority merely by being selected for prospective
+> evaluation.**
+
+- **Authority ≠ ExceptionAuthority.** `G_B`/`P_B` expose no policy
+  arguments. `EffectiveDecisionRule = BaseDecisionRule (∅ expected
+  violations) ⊕ AuthorizedExceptionGrant`, where a grant is a
+  first-class record at `construction/exceptions/<transition>.yaml`
+  that must already exist in the ACCEPTED parent canonical tree —
+  resolved by `G_B` from parent state, identity = its blob sha, never
+  mintable by the invoker of `P_B`. BUILD-004's bootstrap-amendment
+  exception is grandfathered (`exception_grant_BUILD-004 =
+  HISTORICAL_BOOTSTRAP_AMENDMENT`); BUILD-006+ default is `NONE`.
+  `V_B` may replay a receipt's recorded set only to REPRODUCE a
+  historical evaluation — reproduction compares, never authorizes.
+- **Evaluation ≠ CapabilityGrant.** Successor viability runs only via
+  `tools/prospective.py` inside the CapabilityEnvelope: isolated
+  credential-free clone at the exact candidate commit (remotes
+  removed), environment replaced (`PATH` + scratch `HOME`), network
+  denied by `unshare -n`, with MEASURED evidence per run (remote
+  count, env inventory, network-probe outcome, real-repo refs pre/post
+  equality). A detached worktree is not isolation. Declared limits:
+  process/namespace bounding on a shared host, not an OS-image
+  sandbox.
+- **Dual gate.** `Promote(C) ⇒ ParentLaw(C)=PASS ∧
+  SuccessorViability(C)=PASS`. Parent evaluation executes only
+  accepted code over candidate data and runs first; parent FAIL
+  rejects without executing candidate code. The parent admits; the
+  successor never authorizes itself; a successor that cannot validate
+  its own proposed accepted state is not promoted. GateResult and
+  ProspectiveEvaluationResult are distinct evidence objects.
+- **PayloadState ≠ GovernanceLedger.** `CanonicalState =
+  (PayloadState, GovernanceLedger)`. `Reject(C) ⇒ PayloadState' =
+  PayloadState` while `GovernanceLedger' = GovernanceLedger ⊕
+  RejectionEvent` — the canonical commit advances on rejection and the
+  records say exactly that; "canonical unchanged" is retired. Derived:
+  `payload_state` (tree of newest promoted target),
+  `governance_ledger_head`.
+- **Typed evidence claims.** Content, provenance, reproduction, and
+  chronology are separate properties: `MIRROR_BOUND` (mirror/content
+  binding), `OUTCOME_REPRODUCED` (via `--reproduce`),
+  `REMOTE_PRE_PROMOTION` (evidence pushed to the governance branch
+  `claude/genesis-evidence` BEFORE promotion — branch pushes measured
+  available where non-branch ref pushes are denied) vs
+  `CHRONOLOGY_UNATTESTED`. BUILD-004 and earlier remain
+  `CHRONOLOGY_UNATTESTED` permanently. Receipts (schema v3, mandatory
+  from BUILD-005) bind viability verdict, envelope evidence,
+  chronology status, and exception field, all validated by `V_B`.
 
 ## Bootstrap note
 
