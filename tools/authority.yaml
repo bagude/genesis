@@ -1,28 +1,33 @@
-# A_t — generational authority manifest (BUILD-003, PRE-AUDIT-003).
+# A_t — generational authority manifest. rule v2 (BUILD-004).
 #
-# The authority object A_t = (V_t, G_t, P_t, manifest) for admitting a
-# candidate is defined by THIS FILE AS IT EXISTS IN THE ACCEPTED
-# CANONICAL COMMIT. G_B reads it from the canonical tree via git
-# plumbing and verifies each member's blob identity before use. The
-# copy of this file inside a candidate is prospective A_{t+1} only and
-# never participates in selecting or validating A_t for that
-# candidate's own admission (candidate_manifest_rule).
+# The authority object for admitting a candidate is defined by THIS
+# FILE AS IT EXISTS IN THE ACCEPTED CANONICAL COMMIT. Its identity is
+# ALWAYS derived contextually by authority_lib rule v2 — binding the
+# parent canonical sha, this file's blob sha, and the sorted member
+# set — and is NEVER stored as a digest anywhere (AUDIT-003 Finding 1:
+# manually recorded digests are prohibited).
 #
-# First authoritative use: defining A_t for BUILD-004 admission, read
-# from the accepted BUILD-003 canonical state. BUILD-003 itself was
-# admitted under the bootstrap authority frozen in
-# construction/audits/PRE-AUDIT-003-BOOTSTRAP.md.
+# The copy of this file inside a candidate is prospective A_{t+1} only
+# and never participates in its own admission. First authoritative use
+# of this version: BUILD-005 admission, read from the accepted
+# BUILD-004 canonical state. BUILD-004 itself was admitted under the
+# bootstrap authority frozen in
+# construction/audits/BUILD-004-BOOTSTRAP.md.
+rule: v2
 operators:
   V_B: tools/verify_construction.py
   G_B: tools/gate.py
   P_B: tools/promote.py
+  lib: tools/authority_lib.py
 members:
   - path: tools/verify_construction.py
-    blob: 3f64881e51f056e15aad059f1020d2afc8498a96
+    blob: 0ea005fad49f746216d00aea21cc25053aa00704
   - path: tools/gate.py
-    blob: 96f890aa20fb3f6d292f5cfaef6487c048b29017
+    blob: 7ae5c10dfa06b8c6f6f1822eb69e96c31388a170
   - path: tools/promote.py
-    blob: 877e358878f788efcc347844fd44aea0766b2501
+    blob: 4803c84eedbea42f0c5ca5f41c236f8c868fc5f7
+  - path: tools/authority_lib.py
+    blob: 16f86a87489736742c4275933fa5dafb2d3ee7e8
   - path: tools/probes.yaml
     blob: 01eb084c0d6b856d5b80da368abad96d2cf7e57b
   - path: construction/schemas/build_proposal.schema.yaml

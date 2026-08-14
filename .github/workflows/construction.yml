@@ -17,4 +17,10 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pyyaml
+      # Evidence objects live on refs/construction/* (pushed before
+      # promotion); fetch them so V_B can verify provenance.
+      - run: git fetch origin '+refs/construction/*:refs/construction/*' || true
       - run: python3 tools/verify_construction.py
+      # Independent reproduction of the newest receipt's parent-law
+      # evaluation. CI remains attestation, not gate authority.
+      - run: python3 tools/verify_construction.py --reproduce

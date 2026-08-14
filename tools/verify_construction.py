@@ -48,6 +48,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import authority_lib as lib  # noqa: E402  (single source of authority truth)
+
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = ROOT / "construction" / "schemas"
 PROPOSALS = ROOT / "construction" / "proposals"
@@ -57,10 +60,11 @@ REGISTRY = ROOT / "tools" / "probes.yaml"
 
 RECORD_NAMESPACES = ("construction/proposals/", "construction/groundings/",
                      "construction/audits/", "construction/receipts/",
-                     "construction/rejections/")
+                     "construction/rejections/", "construction/evidence/")
 IMPLICIT_SCOPE = ("construction/proposals/", "construction/groundings/",
                   "construction/audits/")
-RECEIPT_COMMIT_SCOPE = ("construction/receipts/", "construction/rejections/")
+RECEIPT_COMMIT_SCOPE = ("construction/receipts/", "construction/rejections/",
+                        "construction/evidence/")
 PROPOSAL_COMMIT_SCOPE = ("construction/proposals/", "construction/audits/")
 TRAILER_RE = re.compile(r"^Construction-Transition:\s*(BUILD-\d{3})\s*$",
                         re.MULTILINE)
@@ -206,13 +210,36 @@ def attribute_commits(pids: list[str]) -> dict[str, set[str]]:
 # --- experiments (E_B: registry-resolved, isolated) -------------------------
 
 def environment_id() -> str:
-    """First-class environment identity (AUDIT-002 secondary finding):
-    fingerprints the language runtime and library surface, not the OS
-    image (declared BUILD-003 non-claim)."""
-    fingerprint = (f"python={platform.python_version()}"
-                   f"|system={platform.system()}"
-                   f"|pyyaml={yaml.__version__}")
-    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
+    """Delegates to authority_lib — one derivation everywhere
+    (AUDIT-003: never two implementations of an identity rule)."""
+    return lib.environment_id()
+
+
+# BUILD-003 bootstrap identity discrepancy (AUDIT-003 Finding 1).
+# These are FROZEN HISTORICAL constants from PRE-AUDIT-003-BOOTSTRAP;
+# the derived value is recomputed mechanically on every run so the
+# discrepancy stays permanently visible and is never silently
+# normalized. Closed records are not mutated.
+B003_BOOTSTRAP_MEMBERS = [
+    ("c495d9ffaa7e89f6b210de8672b4a034f3227bbb", "tools/verify_construction.py"),
+    ("01eb084c0d6b856d5b80da368abad96d2cf7e57b", "tools/probes.yaml"),
+    ("a706e30ba7dae9bd17b6114144bbe3d2a123d870", "construction/schemas/build_proposal.schema.yaml"),
+    ("dcadfd1efa6a3981883b570a876c58662ef74ddc", "construction/schemas/build_grounding.schema.yaml"),
+]
+B003_RECORDED_IDENTITY = \
+    "a498931e482a1022e03f80f3291d75f28177363e5f65ee05d42a1a10a69ad4ac"
+
+
+def b003_bootstrap_discrepancy() -> dict[str, str]:
+    lines = sorted(f"{b} {p}" for b, p in B003_BOOTSTRAP_MEMBERS)
+    derived = hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest()
+    status = "MATCH" if derived == B003_RECORDED_IDENTITY \
+        else "MISMATCH_ARCHIVED_AUDIT-003"
+    return {
+        "bootstrap_identity_recorded_BUILD-003": B003_RECORDED_IDENTITY,
+        "bootstrap_identity_derived_BUILD-003": derived,
+        "bootstrap_identity_status_BUILD-003": status,
+    }
 
 
 def load_registry() -> dict[str, dict]:
@@ -320,15 +347,32 @@ def derive_transition(pid: str, proposal: dict, commits: set[str],
     realization = sorted(commits - {pcommit})
 
     if has_grounding:
-        if not realization:
+        # Pre-proposal record commits are lawful inputs to a proposal
+        # (AUDIT-003 protocol: archive audit -> freeze bootstrap ->
+        # preregister), provided they touch ONLY the audit-record
+        # namespace. Everything else attributed must strictly follow
+        # the proposal commit. (Repairs the V_BUILD-003 defect archived
+        # in BUILD-004-BOOTSTRAP.)
+        pre = [c for c in realization if is_strict_ancestor(c, pcommit)]
+        post = [c for c in realization if is_strict_ancestor(pcommit, c)]
+        stray = sorted(set(realization) - set(pre) - set(post))
+        bad_pre = [c for c in pre
+                   if any(not f.startswith("construction/audits/")
+                          for f in commit_files(c))]
+        if not post:
             derived[f"proposal_precedence_{pid}"] = "FAIL"
-            fail(f"{pid}: grounded but no realization commit is attributed")
-        elif all(is_strict_ancestor(pcommit, r) for r in realization):
-            derived[f"proposal_precedence_{pid}"] = "PASS"
+            fail(f"{pid}: grounded but no realization commit follows the "
+                 f"proposal commit")
+        elif stray or bad_pre:
+            derived[f"proposal_precedence_{pid}"] = "FAIL"
+            for c in stray:
+                fail(f"{pid}: attributed commit {c[:7]} is neither an "
+                     f"ancestor nor a descendant of the proposal commit")
+            for c in bad_pre:
+                fail(f"{pid}: pre-proposal attributed commit {c[:7]} "
+                     f"touches paths outside construction/audits/")
         else:
-            derived[f"proposal_precedence_{pid}"] = "FAIL"
-            fail(f"{pid}: proposal commit is not a strict ancestor of all "
-                 f"realization commits")
+            derived[f"proposal_precedence_{pid}"] = "PASS"
 
     scope = tuple(proposal.get("allowed_scope", [])) + IMPLICIT_SCOPE
     realization_files: set[str] = set()
@@ -478,13 +522,25 @@ def measure_globals(boundary: str | None, enforce: bool) -> dict[str, str]:
 
 # --- promotion receipts (G_B evidence, closure-bound) ------------------------
 
-def check_receipts(proposals: dict[str, dict], grounded: set[str]) -> dict[str, dict]:
-    """Validate GateReceipts: exact-target binding to the transition's
-    final (grounding-adding) commit, PASS verdict, authority identity
-    present. Required for closed transitions >= RECEIPT_REQUIRED_FROM;
-    BUILD-003's receipt is the declared bootstrap (validated when
-    present, not law-required)."""
+def check_receipts(proposals: dict[str, dict],
+                   grounded: set[str]) -> tuple[dict[str, dict], dict[str, str]]:
+    """Validate PromotionReceipts. Content checks (exact-target, PASS,
+    authority present) apply to all; schema_version >= 2 receipts are
+    additionally validated for PROVENANCE (AUDIT-003): the authority
+    identity is recomputed from actual git objects at the receipt's
+    parent canonical, and the bound GateResult evidence object must
+    exist on the evidence ref and bind exactly this target, authority,
+    environment, and verdict. Receipt contents alone never establish
+    validity for v2 receipts.
+
+    Gate-compatible requirement rule (repairs the V_BUILD-003 defect
+    archived in BUILD-004-BOOTSTRAP): a closed transition >=
+    RECEIPT_REQUIRED_FROM must have a receipt only once canonical
+    history extends beyond its closure commit — a finalized,
+    unpromoted candidate is not required to contain its own receipt."""
     receipts: dict[str, dict] = {}
+    provenance: dict[str, str] = {}
+    head = git("rev-parse", "HEAD")
     if RECEIPTS.exists():
         for path in sorted(RECEIPTS.glob("*.yaml")):
             pid = path.stem
@@ -505,12 +561,85 @@ def check_receipts(proposals: dict[str, dict], grounded: set[str]) -> dict[str, 
                      f"'{rec.get('parent_law_verdict')}'")
             if not rec.get("authority_identity"):
                 fail(f"{label}: missing authority_identity")
+
+            if rec.get("schema_version", 1) >= 2:
+                provenance[pid] = check_receipt_provenance(label, rec)
+            else:
+                # BUILD-003-era receipt: content observable, provenance
+                # not mechanically reconstructable (AUDIT-003). Never
+                # silently normalized.
+                provenance[pid] = "HISTORICAL_UNVERIFIED"
     for pid in sorted(grounded):
-        if pid in proposals and pid_number(pid) >= RECEIPT_REQUIRED_FROM \
-                and pid not in receipts:
+        if pid not in proposals or pid_number(pid) < RECEIPT_REQUIRED_FROM \
+                or pid in receipts:
+            continue
+        boundary = adding_commit(f"construction/groundings/{pid}.yaml")
+        if boundary is not None and boundary != head:
             fail(f"{pid}: closed transition has no promotion receipt "
-                 f"(required from BUILD-{RECEIPT_REQUIRED_FROM:03d})")
-    return receipts
+                 f"(required from BUILD-{RECEIPT_REQUIRED_FROM:03d} once "
+                 f"canonical history extends past closure)")
+    return receipts, provenance
+
+
+def read_evidence_any(pid: str, rec: dict) -> dict:
+    """Load GateResult evidence: prefer the content-addressed object on
+    the evidence ref; fall back to the in-history mirror under
+    construction/evidence/ (required for CI and fresh clones — the
+    platform blocks non-branch ref pushes; declared in
+    BUILD-004-BOOTSTRAP-AMENDMENT-1). If both exist they must agree."""
+    evidence_id = rec.get("evidence_object")
+    ref_meta = None
+    try:
+        ref_meta = lib.read_evidence(evidence_id)
+    except RuntimeError:
+        pass
+    mirror = ROOT / "construction" / "evidence" / f"{pid}.yaml"
+    mirror_meta = load_yaml(mirror) if mirror.exists() else None
+    if ref_meta is not None and mirror_meta is not None \
+            and ref_meta != mirror_meta:
+        fail(f"construction/evidence/{pid}.yaml: mirror does not equal the "
+             f"evidence object {evidence_id}")
+    meta = ref_meta if ref_meta is not None else mirror_meta
+    if meta is None:
+        raise RuntimeError(
+            f"evidence object '{evidence_id}' unreadable and no mirror")
+    return meta
+
+
+def check_receipt_provenance(label: str, rec: dict) -> str:
+    """Provenance of a schema-v2 receipt: recompute the authority
+    identity from git objects and verify the bound evidence object."""
+    ok = True
+    try:
+        derived = lib.derive_authority_identity(rec.get("parent_canonical", ""))
+        if derived["identity"] != rec.get("authority_identity"):
+            fail(f"{label}: authority_identity does not equal the value "
+                 f"derived from git objects at parent_canonical "
+                 f"({derived['identity']})")
+            ok = False
+    except RuntimeError as exc:
+        fail(f"{label}: cannot derive authority identity: {exc}")
+        ok = False
+    try:
+        meta = read_evidence_any(Path(label).stem, rec)
+    except RuntimeError as exc:
+        fail(f"{label}: GateResult evidence unreadable: {exc}")
+        return "EVIDENCE_MISSING"
+    for key in ("target_commit", "target_tree", "parent_canonical",
+                "authority_identity", "environment_id"):
+        if meta.get(key) != rec.get(key):
+            fail(f"{label}: evidence object {key} '{meta.get(key)}' does "
+                 f"not bind receipt value '{rec.get(key)}'")
+            ok = False
+    if meta.get("verdict") != rec.get("parent_law_verdict"):
+        fail(f"{label}: evidence verdict '{meta.get('verdict')}' does not "
+             f"bind receipt parent_law_verdict")
+        ok = False
+    if sorted(meta.get("expected_violations") or []) != \
+            sorted(rec.get("expected_violations") or []):
+        fail(f"{label}: evidence expected_violations do not bind receipt")
+        ok = False
+    return "EVIDENCE_BOUND" if ok else "EVIDENCE_CONFLICT"
 
 
 # --- record checks -----------------------------------------------------------
@@ -663,9 +792,12 @@ def main() -> int:
     now_globals = measure_globals(None, enforce=True)
     derived.update(now_globals)
     derived["environment_id"] = environment_id()
+    derived.update(b003_bootstrap_discrepancy())
 
-    # G_B evidence: promotion receipts (external authority records).
-    receipts = check_receipts(proposals, grounded)
+    # G_B evidence: promotion receipts, validated for provenance.
+    receipts, provenance = check_receipts(proposals, grounded)
+    for pid, status in provenance.items():
+        derived[f"receipt_provenance_{pid}"] = status
 
     # E_B: experiments, registry-resolved, isolated.
     probe_names: set[str] = set()
@@ -690,5 +822,44 @@ def main() -> int:
     return 1 if FAILURES else 0
 
 
+def reproduce() -> int:
+    """Independent reproduction (AUDIT-003 obligation 3): re-execute the
+    parent-law evaluation recorded by the newest schema-v2 receipt from
+    frozen git objects and compare verdict and violation set against
+    the bound evidence. Distinguishes authentic gate evidence from a
+    fabricated PASS: a receipt whose target the parent law actually
+    rejects cannot reproduce."""
+    import gate  # deferred: only reproduction executes the gate
+    candidates = sorted(RECEIPTS.glob("*.yaml")) if RECEIPTS.exists() else []
+    newest = None
+    for path in candidates:
+        rec = load_yaml(path)
+        if rec.get("schema_version", 1) >= 2:
+            if newest is None or pid_number(path.stem) > pid_number(newest[0]):
+                newest = (path.stem, rec)
+    if newest is None:
+        print("reproduce: no schema-v2 receipts to reproduce")
+        return 0
+    pid, rec = newest
+    meta = read_evidence_any(pid, rec)
+    result = gate.run_parent_law(rec["parent_canonical"],
+                                 rec["target_commit"],
+                                 rec.get("expected_violations") or [],
+                                 transition=pid, emit_evidence=False)
+    same_verdict = result["verdict"] == meta.get("verdict")
+    same_violations = result["violations"] == (meta.get("violations") or [])
+    if same_verdict and same_violations:
+        print(f"reproduce {pid}: REPRODUCED "
+              f"(verdict={result['verdict']}, "
+              f"violations={len(result['violations'])})")
+        return 0
+    print(f"reproduce {pid}: DIVERGENT — live verdict "
+          f"{result['verdict']} / violations {result['violations']} vs "
+          f"evidence {meta.get('verdict')} / {meta.get('violations')}")
+    return 1
+
+
 if __name__ == "__main__":
+    if "--reproduce" in sys.argv:
+        sys.exit(reproduce())
     sys.exit(main())

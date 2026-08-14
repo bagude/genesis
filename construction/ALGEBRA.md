@@ -1,4 +1,4 @@
-# Construction Algebra — v1.3 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003)
+# Construction Algebra — v1.4 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003, BUILD-004)
 
 ## Principle
 
@@ -226,6 +226,64 @@ Five causal roles, kept as distinct operators: `R_B` measurement,
   canonical mutations bypassing `P_B` are detected as permanent ledger
   violations; capability-level prevention requires platform branch
   protection (declared governance limitation).
+
+## Amendment v1.4 — Evidence provenance (BUILD-004, from AUDIT-003)
+
+> **Evidence content ≠ evidence provenance. A claim about a causal
+> event is not evidence of that event merely because its fields are
+> internally consistent.**
+
+- **Causal coupling.** `P_B` accepts no verdict, receipt, or evidence
+  inputs. It invokes the parent-law GateRun itself over the exact
+  target and authorizes only from that in-process result:
+  `Promote(C) ⇒ ActualParentLawExecution(C) = PASS`. Within the lawful
+  path there is no route from fabricated PASS data to promotion.
+- **Object ontology.** GateRun (process) → GateResult
+  (content-addressed evidence object on `refs/construction/evidence`,
+  emitted by `G_B` and committed BEFORE promotion; remote ref push is
+  best-effort — where the platform denies non-branch ref pushes
+  (observed HTTP 403, declared in BUILD-004-BOOTSTRAP-AMENDMENT-1),
+  remote durability is provided by the in-history mirror under
+  `construction/evidence/` appended with the receipt) →
+  AuthorizationDecision (in-process, from the actual result) →
+  Promote → PromotionReceipt (schema_version 2, referencing the
+  GateResult evidence id; OUTPUT evidence, never authority) →
+  PostPromotionAttestation (CI + full-ledger `V_B`). Receipt is
+  evidence only.
+- **Derived-only authority identities, rule v2.**
+  `SHA256("authority-rule:v2\n" + "parent:<sha>\n" +
+  "manifest:<blob>\n" + sorted "<blob> <path>" member lines + "\n")`,
+  members verified against the parent tree before hashing, implemented
+  once in `tools/authority_lib.py` and imported by `G_B`, `P_B`, and
+  `V_B`. No digest is ever manually recorded. The identity binds
+  parent canonical + manifest + member set, so a PASS under `A_t`
+  cannot authorize under `A_{t+1}`.
+- **Provenance-aware verification.** For schema-v2 receipts `V_B`
+  recomputes the authority identity from git objects and requires the
+  bound evidence object to exist and bind exactly the receipt's
+  target, tree, parent canonical, authority, environment, verdict, and
+  expected-violation set (`receipt_provenance_<id> = EVIDENCE_BOUND`).
+  `--reproduce` re-executes the newest receipt's parent-law evaluation
+  from frozen blobs and compares outcomes; CI runs it as independent
+  attestation. BUILD-003's receipt remains
+  `HISTORICAL_UNVERIFIED` and its bootstrap identity discrepancy
+  (recorded `a498931e…` vs derived `38cbeab3…`) is surfaced as
+  permanent derived measurements — archived in AUDIT-003, never
+  normalized, closed records untouched.
+- **Gate-compatible receipt law.** A closed transition ≥ BUILD-004
+  requires a receipt only once canonical history extends beyond its
+  closure commit (a finalized, unpromoted candidate cannot contain its
+  own receipt — the V_BUILD-003 defect archived in
+  BUILD-004-BOOTSTRAP).
+- **Chronology.** `Finalize ≺ Evaluate ≺ Authorize ≺ Promote` is
+  reconstructable from the remote evidence ref (pushed pre-promotion)
+  and CI timestamps, not from builder prose. Rejected attempts keep
+  their evidence objects and are preserved under
+  `construction/rejections/`.
+- **No overclaim.** Provenance rests on evidence binding, pre-promotion
+  remote chronology, and reproducibility — not signatures. Promotion
+  exclusivity remains detection, not prevention, until platform branch
+  protection exists.
 
 ## Bootstrap note
 

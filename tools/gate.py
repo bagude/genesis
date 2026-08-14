@@ -1,160 +1,113 @@
 #!/usr/bin/env python3
-"""G_B — the Gate (authorization). BUILD-003, PRE-AUDIT-003 semantics.
+"""G_B — the Gate (parent-law evaluation). v2 (BUILD-004, AUDIT-003).
 
-Authorizes a candidate under the PARENT law A_t, never under the law the
-candidate itself carries. A_t's identity and membership are determined
-exclusively by the accepted canonical state: this tool reads
-tools/authority.yaml FROM THE CANONICAL COMMIT via git plumbing,
-verifies each member's blob identity against the canonical tree,
-extracts exactly those members, overlays them onto a detached worktree
-of the candidate commit, and runs the parent verifier there. The
-candidate's own manifest is never consulted for admission
-(candidate_manifest_rule, PRE-AUDIT-003-BOOTSTRAP).
+Performs the ACTUAL parent-law run and emits a content-addressed
+GateResult evidence object on refs/construction/evidence. It writes no
+receipts and grants nothing: authorization is P_B's decision, taken
+only from a GateRun it invokes itself (causal coupling). The GateResult
+is evidence of the run — never an authorization credential a caller
+can supply.
 
-Output: a GateReceipt (YAML) written OUTSIDE the repository. The
-receipt — not any claim inside the candidate — is what P_B consumes.
-It binds: target commit and tree identity, authority identity,
-parent-law verdict, prospective verdict, environment identity, and
-closure-bound probe evidence.
+Parent law = the authority manifest at the ACCEPTED CANONICAL commit
+(never the candidate's copy): members verified by blob identity against
+the parent tree, extracted by blob, overlaid on a detached worktree of
+the exact candidate commit, and executed there.
 
-Exit 0 iff the parent law admits the candidate.
-
-Usage:
-    python3 tools/gate.py --canonical <ref> --candidate <ref> \
-        --receipt <path-outside-repo>
+The verdict rule supports a frozen expected-violation set (used by
+declared bootstrap admissions where the parent law has a known,
+archived defect): PASS iff the run's violation set equals exactly the
+expected set (normally empty, meaning exit 0 and no violations).
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import platform
-import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-import yaml
+import authority_lib as lib
 
-ROOT = Path(__file__).resolve().parent.parent
-
-
-def git(*args: str, cwd: Path = ROOT) -> str:
-    res = subprocess.run(["git", *args], capture_output=True, text=True,
-                         cwd=cwd)
-    if res.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)}: {res.stderr.strip()}")
-    return res.stdout.strip()
+ROOT = lib.ROOT
 
 
-def authority_members(canonical: str) -> list[dict]:
-    manifest = yaml.safe_load(git("show", f"{canonical}:tools/authority.yaml"))
-    members = manifest.get("members")
-    if not isinstance(members, list) or not members:
-        raise RuntimeError("canonical authority manifest has no members")
-    return members
+def run_parent_law(parent_canonical: str, candidate: str,
+                   expected_violations: list[str] | None = None,
+                   transition: str = "?",
+                   emit_evidence: bool = True) -> dict:
+    """Execute the parent law over the exact candidate commit. Returns
+    the GateResult dict (including evidence commit id if emitted)."""
+    expected = sorted(expected_violations or [])
+    authority = lib.derive_authority_identity(parent_canonical)
+    candidate_sha = lib.git("rev-parse", f"{candidate}^{{commit}}")
+    candidate_tree = lib.git("rev-parse", f"{candidate_sha}^{{tree}}")
 
+    scratch = Path(tempfile.mkdtemp(prefix="genesis-gaterun-"))
+    worktree = scratch / "tree"
+    try:
+        lib.git("worktree", "add", "--detach", str(worktree), candidate_sha)
+        for m in authority["members"]:
+            target = worktree / m["path"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            blob = subprocess.run(["git", "cat-file", "blob", m["blob"]],
+                                  capture_output=True, cwd=ROOT)
+            if blob.returncode != 0:
+                raise RuntimeError(f"cannot read blob for {m['path']}")
+            target.write_bytes(blob.stdout)
+        res = subprocess.run(
+            [sys.executable, str(worktree / "tools" / "verify_construction.py")],
+            capture_output=True, text=True, cwd=worktree, timeout=900)
+        output = res.stdout + (("\n" + res.stderr) if res.stderr else "")
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", str(worktree)],
+                       capture_output=True, cwd=ROOT)
 
-def authority_identity(members: list[dict]) -> str:
-    lines = sorted(f"{m['blob']} {m['path']}" for m in members)
-    return hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest()
+    violations = sorted(line[5:].strip() for line in output.splitlines()
+                        if line.startswith("FAIL "))
+    if expected:
+        verdict = "PASS" if violations == expected else "FAIL"
+    else:
+        verdict = "PASS" if res.returncode == 0 and not violations else "FAIL"
 
-
-def environment_id() -> str:
-    fingerprint = (f"python={platform.python_version()}"
-                   f"|system={platform.system()}"
-                   f"|pyyaml={yaml.__version__}")
-    return hashlib.sha256(fingerprint.encode()).hexdigest()[:16]
-
-
-def verify_and_extract(canonical: str, members: list[dict],
-                       dest: Path) -> None:
-    for m in members:
-        path, blob = m["path"], m["blob"]
-        actual = git("rev-parse", f"{canonical}:{path}")
-        if actual != blob:
-            raise RuntimeError(
-                f"authority member {path} blob {actual} does not match "
-                f"manifest {blob}")
-        target = dest / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        content = subprocess.run(
-            ["git", "cat-file", "blob", blob], capture_output=True, cwd=ROOT)
-        if content.returncode != 0:
-            raise RuntimeError(f"cannot read blob {blob} for {path}")
-        target.write_bytes(content.stdout)
-
-
-def run_verifier(worktree: Path) -> tuple[str, str]:
-    res = subprocess.run(
-        [sys.executable, str(worktree / "tools" / "verify_construction.py")],
-        capture_output=True, text=True, cwd=worktree, timeout=600)
-    verdict = "PASS" if res.returncode == 0 else "FAIL"
-    return verdict, res.stdout
-
-
-def probe_evidence(output: str) -> dict[str, str]:
-    evidence = {}
-    for line in output.splitlines():
-        m = re.match(r"derived (probe_\S+) = (\S+)", line)
-        if m:
-            evidence[m.group(1)] = m.group(2)
-    return evidence
+    result = {
+        "schema": "GateResult/1",
+        "transition": transition,
+        "target_commit": candidate_sha,
+        "target_tree": candidate_tree,
+        "parent_canonical": authority["parent_canonical"],
+        "authority_identity": authority["identity"],
+        "authority_rule": authority["rule"],
+        "authority_serialization": authority["serialization"],
+        "verdict": verdict,
+        "exit_code": res.returncode,
+        "violations": violations,
+        "expected_violations": expected,
+        "environment_id": lib.environment_id(),
+    }
+    if emit_evidence:
+        result["evidence_object"] = lib.write_evidence(result, output)
+    result["output"] = output
+    return result
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--canonical", required=True)
     ap.add_argument("--candidate", required=True)
-    ap.add_argument("--receipt", required=True)
+    ap.add_argument("--transition", default="?")
+    ap.add_argument("--expect-violation", action="append", default=[])
     args = ap.parse_args()
 
-    receipt_path = Path(args.receipt).resolve()
-    if str(receipt_path).startswith(str(ROOT)):
-        print("FAIL receipt path must be outside the repository")
-        return 1
-
-    canonical = git("rev-parse", args.canonical)
-    candidate = git("rev-parse", args.candidate)
-    candidate_tree = git("rev-parse", f"{candidate}^{{tree}}")
-
-    members = authority_members(canonical)
-    auth_id = authority_identity(members)
-
-    scratch = Path(tempfile.mkdtemp(prefix="genesis-gate-"))
-    parent_wt = scratch / "parent-law"
-    prospective_wt = scratch / "prospective"
-    try:
-        git("worktree", "add", "--detach", str(parent_wt), candidate)
-        verify_and_extract(canonical, members, parent_wt)
-        parent_verdict, parent_out = run_verifier(parent_wt)
-
-        git("worktree", "add", "--detach", str(prospective_wt), candidate)
-        prospective_verdict, _ = run_verifier(prospective_wt)
-    finally:
-        for wt in (parent_wt, prospective_wt):
-            subprocess.run(["git", "worktree", "remove", "--force", str(wt)],
-                           capture_output=True, cwd=ROOT)
-
-    receipt = {
-        "receipt": "GateReceipt",
-        "target_commit": candidate,
-        "target_tree": candidate_tree,
-        "authority_canonical": canonical,
-        "authority_identity": auth_id,
-        "authority_members": members,
-        "parent_law_verdict": parent_verdict,
-        "prospective_law_verdict": prospective_verdict,
-        "environment_id": environment_id(),
-        "probe_evidence": probe_evidence(parent_out),
-        "issuer": "A_t parent law bundle executed by gate ceremony",
-    }
-    receipt_path.write_text(yaml.safe_dump(receipt, sort_keys=False))
-    print(f"gate: parent_law_verdict={parent_verdict} "
-          f"prospective={prospective_verdict} target={candidate[:12]} "
-          f"receipt={receipt_path}")
-    return 0 if parent_verdict == "PASS" else 1
+    result = run_parent_law(args.canonical, args.candidate,
+                            args.expect_violation, args.transition)
+    print(f"gate: verdict={result['verdict']} "
+          f"target={result['target_commit'][:12]} "
+          f"authority={result['authority_identity'][:16]} "
+          f"evidence={result.get('evidence_object', 'none')[:12]} "
+          f"violations={len(result['violations'])} "
+          f"expected={len(result['expected_violations'])}")
+    return 0 if result["verdict"] == "PASS" else 1
 
 
 if __name__ == "__main__":

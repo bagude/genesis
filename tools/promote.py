@@ -1,104 +1,157 @@
 #!/usr/bin/env python3
-"""P_B — Promotion. BUILD-003, PRE-AUDIT-003 semantics.
+"""P_B — Promotion. v2 (BUILD-004, AUDIT-003 repair).
 
-Consumes ONLY the external GateReceipt — never any claim inside the
-candidate. Enforces the exact-target invariant and then, and only then,
-moves the canonical ref:
+CAUSAL COUPLING: this tool takes NO verdict, receipt, or evidence
+inputs. It invokes the parent-law GateRun itself (G_B, in-process) over
+the exact target and authorizes only from that actual result. There is
+therefore no execution path from fabricated PASS data to promotion
+within the lawful path: the only thing that can satisfy the
+authorization condition is the parent law actually returning PASS,
+here, on this exact commit.
 
-    Promote(C') => C' = receipt.target_commit   (full-SHA equality)
-    receipt.parent_law_verdict == PASS
-    receipt.authority_identity == identity recomputed from the
-        canonical manifest at promotion time
+Sequence (AUDIT-003 obligation 2 ontology):
 
-The ref move is a fast-forward performed atomically with an
-expected-old-value check, so a concurrent canonical mutation aborts the
-promotion instead of being overwritten. After promotion, the receipt is
-appended to the ledger as construction/receipts/BUILD-NNN.yaml in a
-receipt-only commit carrying the "Construction-Receipt: BUILD-NNN"
-trailer — the authorized consequence of this ceremony, restricted to
-the receipt namespace (receipt_append_authorization,
-PRE-AUDIT-003-BOOTSTRAP).
+    GateRun (invoked here) -> GateResult (evidence object, pushed to
+    the remote evidence ref BEFORE promotion) -> AuthorizationDecision
+    (in-process, from the returned result only) -> Promote (atomic
+    expected-old-value fast-forward, exact-target full-SHA equality)
+    -> PromotionReceipt (schema_version 2, referencing the GateResult
+    evidence id — OUTPUT evidence of this ceremony, never an input)
+    -> PostPromotionAttestation (CI / full-ledger V_B, separate).
 
-Promotion exclusivity is law-with-detection: this tool is the only
-LAWFUL path onto canonical; capability-level exclusivity requires
-platform branch protection (declared limitation).
+FAIL leaves canonical unchanged; the failed run's evidence object is
+preserved on the evidence ref and the attempt is recorded under
+construction/rejections/.
 
-Usage:
-    python3 tools/promote.py --receipt <file> --canonical <branch> \
-        --transition BUILD-NNN
+Capability note (unchanged, no overclaim): this is the only LAWFUL
+path onto canonical; preventing unlawful direct pushes requires
+platform branch protection.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import subprocess
 import sys
 from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+import authority_lib as lib
+import gate
+
+ROOT = lib.ROOT
 
 
-def git(*args: str) -> str:
-    res = subprocess.run(["git", *args], capture_output=True, text=True,
-                         cwd=ROOT)
-    if res.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)}: {res.stderr.strip()}")
-    return res.stdout.strip()
+def append_record(branch: str, files: dict[str, str], trailer: str) -> None:
+    lib.git("checkout", branch)
+    for relpath, content in files.items():
+        dest = ROOT / relpath
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content)
+        lib.git("add", relpath)
+    names = ", ".join(Path(p).name for p in files)
+    lib.git("commit", "-m", f"Append {names}\n\n{trailer}")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--receipt", required=True)
     ap.add_argument("--canonical", required=True)
+    ap.add_argument("--candidate", required=True)
     ap.add_argument("--transition", required=True)
+    ap.add_argument("--expect-violation", action="append", default=[])
     args = ap.parse_args()
 
-    receipt = yaml.safe_load(Path(args.receipt).read_text())
-    target = receipt.get("target_commit", "")
-    verdict = receipt.get("parent_law_verdict")
-    claimed_auth = receipt.get("authority_identity")
+    canonical_sha = lib.git("rev-parse", f"refs/heads/{args.canonical}")
+    candidate_sha = lib.git("rev-parse", f"{args.candidate}^{{commit}}")
 
-    if verdict != "PASS":
-        print(f"REJECT: parent_law_verdict={verdict}; canonical unchanged")
-        return 1
-
-    canonical_sha = git("rev-parse", args.canonical)
-    # Recompute authority identity from the canonical manifest NOW —
-    # the receipt's claim must match accepted parent state.
-    manifest = yaml.safe_load(
-        git("show", f"{canonical_sha}:tools/authority.yaml"))
-    lines = sorted(f"{m['blob']} {m['path']}" for m in manifest["members"])
-    actual_auth = hashlib.sha256(("\n".join(lines) + "\n").encode()).hexdigest()
-    if claimed_auth != actual_auth:
-        print(f"REJECT: receipt authority {claimed_auth} does not match "
-              f"canonical authority {actual_auth}; canonical unchanged")
-        return 1
-
-    if git("rev-parse", target) != target:
-        print("REJECT: receipt target is not a full canonical object id")
-        return 1
-    if git("merge-base", canonical_sha, target) != canonical_sha:
-        print("REJECT: target is not a fast-forward of canonical; "
+    if lib.git("merge-base", canonical_sha, candidate_sha) != canonical_sha:
+        print("REJECT: candidate is not a fast-forward of canonical; "
               "canonical unchanged")
         return 1
 
-    # Exact-target, atomic, fast-forward-only ref move.
-    git("update-ref", f"refs/heads/{args.canonical}", target, canonical_sha)
-    print(f"PROMOTED {args.canonical}: {canonical_sha[:12]} -> {target[:12]}")
+    # GateRun — the actual parent-law execution, invoked by P_B itself.
+    result = gate.run_parent_law(canonical_sha, candidate_sha,
+                                 args.expect_violation, args.transition)
+    evidence_id = result["evidence_object"]
 
-    # Authorized receipt append (receipt namespace only).
-    git("checkout", args.canonical)
-    dest = ROOT / "construction" / "receipts" / f"{args.transition}.yaml"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(Path(args.receipt).read_text())
-    git("add", str(dest.relative_to(ROOT)))
-    git("commit", "-m",
-        f"Append GateReceipt for {args.transition}\n\n"
+    # Pre-promotion durability: the evidence object is committed to the
+    # local evidence ref before any canonical mutation. Remote ref push
+    # is best-effort — the platform may deny non-branch ref pushes
+    # (BUILD-004-BOOTSTRAP-AMENDMENT-1); remote durability is then
+    # provided by the in-history mirror appended with the receipt.
+    try:
+        lib.git("push", "origin", f"{lib.EVIDENCE_REF}:{lib.EVIDENCE_REF}")
+        evidence_pushed = "yes"
+    except RuntimeError as exc:
+        evidence_pushed = "no (platform ref-push policy)"
+        print(f"warning: evidence ref push denied: {exc}")
+    print(f"evidence object: {evidence_id} (remote push: {evidence_pushed})")
+
+    prospective = gate.run_parent_law(candidate_sha, candidate_sha,
+                                      transition=args.transition,
+                                      emit_evidence=False)
+
+    if result["verdict"] != "PASS":
+        rejection = {
+            "transition": args.transition,
+            "target_commit": candidate_sha,
+            "parent_canonical": canonical_sha,
+            "authority_identity": result["authority_identity"],
+            "verdict": result["verdict"],
+            "violations": result["violations"],
+            "evidence_object": evidence_id,
+        }
+        n = 1
+        while (ROOT / "construction" / "rejections" /
+               f"{args.transition}-attempt-{n}.yaml").exists():
+            n += 1
+        append_record(
+            args.canonical,
+            {f"construction/rejections/{args.transition}-attempt-{n}.yaml":
+                yaml.safe_dump(rejection, sort_keys=False)},
+            f"Construction-Receipt: {args.transition}")
+        print(f"REJECT: parent law verdict {result['verdict']}; canonical "
+              f"unchanged; attempt preserved with evidence {evidence_id}")
+        return 1
+
+    # AuthorizationDecision: in-process, from the actual result only.
+    # Exact-target + authority-context binding, then atomic ref move.
+    assert result["target_commit"] == candidate_sha
+    lib.git("update-ref", f"refs/heads/{args.canonical}",
+            candidate_sha, canonical_sha)
+    print(f"PROMOTED {args.canonical}: {canonical_sha[:12]} -> "
+          f"{candidate_sha[:12]}")
+
+    receipt = {
+        "receipt": "PromotionReceipt",
+        "schema_version": 2,
+        "transition": args.transition,
+        "target_commit": candidate_sha,
+        "target_tree": result["target_tree"],
+        "parent_canonical": canonical_sha,
+        "authority_identity": result["authority_identity"],
+        "authority_rule": result["authority_rule"],
+        "evidence_object": evidence_id,
+        "evidence_ref_pushed": evidence_pushed,
+        "parent_law_verdict": result["verdict"],
+        "expected_violations": result["expected_violations"],
+        "prospective_law_verdict": prospective["verdict"],
+        "environment_id": result["environment_id"],
+    }
+    # Mirror must byte-equal the evidence object's meta: the object was
+    # serialized before the evidence id and output were attached.
+    output = result["output"]
+    evidence_meta = {k: v for k, v in result.items()
+                     if k not in ("output", "evidence_object")}
+    append_record(
+        args.canonical,
+        {f"construction/receipts/{args.transition}.yaml":
+            yaml.safe_dump(receipt, sort_keys=False),
+         f"construction/evidence/{args.transition}.yaml":
+            yaml.safe_dump(evidence_meta, sort_keys=False),
+         f"construction/evidence/{args.transition}.log": output},
         f"Construction-Receipt: {args.transition}")
-    print(f"receipt appended: {dest.relative_to(ROOT)}")
+    print(f"receipt + evidence mirror appended (evidence {evidence_id})")
     return 0
 
 

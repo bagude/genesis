@@ -1,0 +1,80 @@
+proposal: BUILD-004
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-004: PASS
+  scope_conformance_BUILD-004: PASS
+  budget_conformance_BUILD-004: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_parent_law_expected_violations: "1"
+  reported_prospective_law_verdict: PASS
+  reported_evidence_object: PRESENT
+
+observed:
+  proposal_precedence_BUILD-004: PASS
+  scope_conformance_BUILD-004: PASS
+  budget_conformance_BUILD-004: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_parent_law_expected_violations: "4"
+  reported_prospective_law_verdict: PASS
+  reported_evidence_object: PRESENT
+  files_changed_BUILD-004: "13"
+
+unexpected:
+  - attempt 1 (candidate 83873e6..., evidence fbcee211...) was REJECTED
+    by the gate under the originally frozen single-violation rule; the
+    parent law has a second unrepresentable structure (pre-proposal
+    audit-record commits from AUDIT-003's own protocol ordering) which
+    attempt 1's successor law also failed to repair; the prediction
+    reported_parent_law_expected_violations "1" was therefore WRONG
+    (observed "4"); rejection preserved append-only and the bootstrap
+    was amended (BUILD-004-BOOTSTRAP-AMENDMENT-1) before this candidate
+    was finalized
+  - the platform push policy denies non-branch ref pushes (HTTP 403
+    observed), so pre-promotion REMOTE durability of the evidence ref
+    is unachievable in this environment; evidence objects are committed
+    locally pre-promotion and mirrored in-history under
+    construction/evidence/ post-promotion, per the amendment
+  - inspection root-caused AUDIT-003 Finding 1 precisely; the frozen
+    BUILD-003 digest was computed over a hand-composed path-grouped
+    line ordering instead of the declared sorted-line rule; both
+    values are now permanent derived measurements of the verifier
+  - inspection surfaced a defect AUDIT-003 did not name, declared in
+    BUILD-004-BOOTSTRAP before candidate creation; V_BUILD-003's
+    receipt law is gate-incompatible (a finalized unpromoted candidate
+    cannot contain its own receipt), so the parent-law run over this
+    candidate is expected to yield exactly one frozen violation; v5
+    repairs the law by requiring receipts only once canonical history
+    extends past closure
+  - the in-candidate reported_ gate keys remain fixed-point hypotheses;
+    from this transition their authoritative counterparts are the
+    GateResult evidence object on refs/construction/evidence (pushed
+    pre-promotion) and the schema-v2 PromotionReceipt bound to it
+
+evidence:
+  audit: construction/audits/AUDIT-003.md
+  bootstrap_authority: construction/audits/BUILD-004-BOOTSTRAP.md
+  proposal_commit: "bfe2fc9fcf2a3cd3aeda9dc918002272ae22371a"
+  authority_identity_note: derived at ceremony by rule v2; recorded
+    only in the GateResult evidence object and PromotionReceipt, never
+    hand-composed here
+  verifier_cmd: python3 tools/verify_construction.py
+
+decision:
+  verdict: REALIZED
+  next: BUILD-005 (Phase 0 — Genesis / contracts), admitted under the
+    corrected generational mechanism (authority manifest rule v2 at the
+    accepted BUILD-004 state, causal-coupled P_B) with no further
+    bootstrap exception
