@@ -1,0 +1,38 @@
+receipt: PromotionReceipt
+schema_version: 4
+transition: BUILD-006
+target_commit: 49ebd66eabe1e23cb3c4e915e05b1ebae69cb5fd
+target_tree: 3467f804cd7d566edccb384d1cf50f03f3cb3166
+parent_canonical: e46b4bbc801f3368aaced19213a55ea19479e416
+authority_identity: 9ddf627ed54ef7e1566d9467e426f08a5859cce4553b415d3eb9c6966b9d66ce
+authority_rule: v2
+evidence_object: 6e9784f02cf8b5d622479a9ecc16b40c7c257978
+viability_evidence_object: e35a5d4c274de390467179c8e9197d4b91a9d3a3
+parent_law_verdict: PASS
+expected_violations: []
+exception_grant: NONE
+successor_viability_verdict: PASS
+capability_policy_id: realm/v1:unshare-mn+ro-binds+chroot+setpriv-65534
+capability_envelope:
+  storage_hardlinks: '0'
+  remotes: '0'
+  realm_uid: '65534'
+  all_forbidden_denied: 'true'
+  scratch_writable: 'true'
+  probe_see_parent_repo: DENIED:FileNotFoundError
+  probe_write_parent_repo: DENIED:FileNotFoundError
+  probe_write_parent_refs: DENIED:FileNotFoundError
+  probe_write_parent_git_config: DENIED:FileNotFoundError
+  probe_write_parent_git_objects: DENIED:FileNotFoundError
+  probe_write_usr: DENIED:OSError
+  probe_write_etc: DENIED:OSError
+  probe_write_host_root: DENIED:PermissionError
+  probe_forbidden_env_token: DENIED:KeyError
+  probe_network: DENIED:URLError
+  probe_write_scratch: ALLOWED
+  parent_refs_unchanged: 'true'
+  parent_objects_unchanged: 'true'
+  parent_worktree_unchanged: 'true'
+chronology_status: REMOTE_EVIDENCE_PRESENT
+prepromotion_chronology: UNATTESTED
+environment_id: 05fb1d1e8f917bec
