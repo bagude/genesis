@@ -1,22 +1,28 @@
 schema: ProspectiveEvaluation/3
 transition: BUILD-007
-stage: payload
-target_commit: 877710b413609551f1a676c9f2733454b44c3e02
+stage: canonical
+target_commit: 30e377bdb05562c1d748813526fb2a937bca92f4
 capability_policy_id: realm/v2:unshare-mn+ro-nosuid-nodev-binds+chroot+setpriv-65534+no-new-privs+empty-caps
 capability_policy_blob: 35b5a8df6ede4fccf0768c42d0ec26c8eefc41fe
 evaluator_blob: 7568246e57f0c4257ac165194471fd334562e53b
 environment_id: 05fb1d1e8f917bec
 integrity_before:
   parent_tracked_worktree_digest: 85383d90e485ba47f0babb5cb1dce378e719a2f87f2acf292a93afc0aaa50fbf
-  parent_object_store_digest: 4072e6440bcd7334e131c89e4ffbc3e461b4a81595cd14698c0603e5f2807ad6
-  parent_refs_digest: 9d5f430bc887700128ad007cf9c5bf4077873c7d9ff6251e5ca218e02c7f6207
+  parent_object_store_digest: 354254dba97c1945321978afcf4317b4a546bf4032e20efe2154fc3a012004ab
+  parent_refs_digest: a62b85a4d44a92367c0e76942dee5ba6a3e8be87ea63e001d39d3ded85a12ba7
 integrity_after:
   parent_tracked_worktree_digest: 85383d90e485ba47f0babb5cb1dce378e719a2f87f2acf292a93afc0aaa50fbf
-  parent_object_store_digest: 4072e6440bcd7334e131c89e4ffbc3e461b4a81595cd14698c0603e5f2807ad6
-  parent_refs_digest: 9d5f430bc887700128ad007cf9c5bf4077873c7d9ff6251e5ca218e02c7f6207
-verdict: PASS
-exit_code: 0
-violations: []
+  parent_object_store_digest: 354254dba97c1945321978afcf4317b4a546bf4032e20efe2154fc3a012004ab
+  parent_refs_digest: a62b85a4d44a92367c0e76942dee5ba6a3e8be87ea63e001d39d3ded85a12ba7
+verdict: FAIL
+exit_code: 1
+violations:
+- 'construction/receipts/BUILD-007.yaml: no canonical viability evidence object (successor
+  viability of the inheriting state unproven)'
+- 'construction/receipts/BUILD-007.yaml: promoted receipt lacks successor viability
+  PASS (dual-gate law)'
+- 'construction/receipts/BUILD-007.yaml: viability evidence unreadable: evidence object
+  ''None'' unreadable and no mirror'
 privilege_measured:
   uid: '65534'
   gid: '65534'
@@ -173,3 +179,4 @@ capability_envelope:
   probe_unshare_from_realm: DENIED
   probe_signal_host_process: DENIED
   probe_write_scratch: ALLOWED
+staged_state_commit: 30e377bdb05562c1d748813526fb2a937bca92f4
