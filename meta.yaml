@@ -1,41 +1,14 @@
-schema: ProspectiveEvaluation/2
+schema: CeremonyAttempt/1
 transition: BUILD-007
+attempt: 3
+verdict: ABORTED_EXECUTOR_ERROR
 target_commit: 75061d843b3295b2042d3ad00af9a831b69c3875
-verdict: PASS
-exit_code: 0
-violations: []
-capability_policy_id: realm/v1:unshare-mn+ro-binds+chroot+setpriv-65534
-evaluator_blob: 4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4
-capability_envelope:
-  storage_hardlinks: '0'
-  remotes: '0'
-  realm_uid: '65534'
-  all_forbidden_denied: 'true'
-  scratch_writable: 'true'
-  probe_see_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_refs: DENIED:FileNotFoundError
-  probe_write_parent_git_config: DENIED:FileNotFoundError
-  probe_write_parent_git_objects: DENIED:FileNotFoundError
-  probe_write_usr: DENIED:OSError
-  probe_write_etc: DENIED:OSError
-  probe_write_host_root: DENIED:PermissionError
-  probe_forbidden_env_token: DENIED:KeyError
-  probe_network: DENIED:URLError
-  probe_write_scratch: ALLOWED
-  parent_refs_unchanged: 'true'
-  parent_objects_unchanged: 'true'
-  parent_worktree_unchanged: 'true'
-adversarial_probes:
-  see_parent_repo: DENIED:FileNotFoundError
-  write_parent_repo: DENIED:FileNotFoundError
-  write_parent_refs: DENIED:FileNotFoundError
-  write_parent_git_config: DENIED:FileNotFoundError
-  write_parent_git_objects: DENIED:FileNotFoundError
-  write_usr: DENIED:OSError
-  write_etc: DENIED:OSError
-  write_host_root: DENIED:PermissionError
-  forbidden_env_token: DENIED:KeyError
-  network: DENIED:URLError
-  write_scratch: ALLOWED
+reason: ceremony was driven by the ACCEPTED-state promoter (v4, BUILD-006 law) instead
+  of the candidate repaired promoter, because the working tree had been checked out
+  to canonical before invocation; the old promoter promoted without a canonical-viability
+  gate and its append_record wrote a receipt commit from the canonical working tree,
+  reverting the candidate realization
+ledger_verdict_on_resulting_state: REJECTED (budget exceeded; receipt commit modified
+  and deleted non-receipt paths)
+canonical_effect: rolled back to the amended parent; nothing pushed to origin
 environment_id: 05fb1d1e8f917bec
