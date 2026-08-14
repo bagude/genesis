@@ -1,41 +1,17 @@
-schema: ProspectiveEvaluation/2
-transition: BUILD-006
-target_commit: 49ebd66eabe1e23cb3c4e915e05b1ebae69cb5fd
-verdict: PASS
-exit_code: 0
-violations: []
-capability_policy_id: realm/v1:unshare-mn+ro-binds+chroot+setpriv-65534
-evaluator_blob: 4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4
-capability_envelope:
-  storage_hardlinks: '0'
-  remotes: '0'
-  realm_uid: '65534'
-  all_forbidden_denied: 'true'
-  scratch_writable: 'true'
-  probe_see_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_refs: DENIED:FileNotFoundError
-  probe_write_parent_git_config: DENIED:FileNotFoundError
-  probe_write_parent_git_objects: DENIED:FileNotFoundError
-  probe_write_usr: DENIED:OSError
-  probe_write_etc: DENIED:OSError
-  probe_write_host_root: DENIED:PermissionError
-  probe_forbidden_env_token: DENIED:KeyError
-  probe_network: DENIED:URLError
-  probe_write_scratch: ALLOWED
-  parent_refs_unchanged: 'true'
-  parent_objects_unchanged: 'true'
-  parent_worktree_unchanged: 'true'
-adversarial_probes:
-  see_parent_repo: DENIED:FileNotFoundError
-  write_parent_repo: DENIED:FileNotFoundError
-  write_parent_refs: DENIED:FileNotFoundError
-  write_parent_git_config: DENIED:FileNotFoundError
-  write_parent_git_objects: DENIED:FileNotFoundError
-  write_usr: DENIED:OSError
-  write_etc: DENIED:OSError
-  write_host_root: DENIED:PermissionError
-  forbidden_env_token: DENIED:KeyError
-  network: DENIED:URLError
-  write_scratch: ALLOWED
+schema: GateResult/1
+transition: BUILD-007
+attempt: 1
+target_commit: 772a946a76639b8636a8ea661e5122d4db7568f2
+target_tree: fb51d4678ae004edb928913a12e0f0fb9bb3af4c
+parent_canonical: 79042987a5f145d37c194581b2d6248179b4d746
+authority_identity: 57f7c3eac284f36e17a512526938330997185f3d67bf06a050afc985c86a5f2a
+authority_rule: v2
+verdict: FAIL
+exit_code: 1
+violations:
+- 'construction/groundings/BUILD-007.yaml.observed: key ''typed_probe_semantics_selftest''
+  is neither derived by R_B/E_B nor marked reported_'
+expected_violations: []
 environment_id: 05fb1d1e8f917bec
+issuer_note: executor ceremony attempt 1; parent admission FAILED; candidate code
+  NOT executed
