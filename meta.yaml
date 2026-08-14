@@ -1,41 +1,36 @@
-schema: ProspectiveEvaluation/2
+schema: GateResult/1
 transition: BUILD-006
-target_commit: 69c1a2c02aa4384de833db820c0ce48c776e601a
+target_commit: 49ebd66eabe1e23cb3c4e915e05b1ebae69cb5fd
+target_tree: 3467f804cd7d566edccb384d1cf50f03f3cb3166
+parent_canonical: e46b4bbc801f3368aaced19213a55ea19479e416
+authority_identity: 9ddf627ed54ef7e1566d9467e426f08a5859cce4553b415d3eb9c6966b9d66ce
+authority_rule: v2
+authority_serialization: 'authority-rule:v2
+
+  parent:e46b4bbc801f3368aaced19213a55ea19479e416
+
+  manifest:be26934f94dba9234cd794e87883dcf8b8330387
+
+  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
+
+  16f86a87489736742c4275933fa5dafb2d3ee7e8 tools/authority_lib.py
+
+  59cb24ffb764380da5dd430bc2b2fe26e2012442 tools/prospective.py
+
+  8cd98124de2fb00a428e5f13edbbe2d8af67f0f3 tools/verify_construction.py
+
+  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
+
+  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
+
+  dddce3bb635dce1f02af9ce6ae51b2d777ac83ef tools/gate.py
+
+  df4f32ca0b6d85e2b264b1b41776ff04c631605f tools/promote.py
+
+  '
 verdict: PASS
 exit_code: 0
 violations: []
-capability_policy_id: realm/v1:unshare-mn+ro-binds+chroot+setpriv-65534
-evaluator_blob: 4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4
-capability_envelope:
-  storage_hardlinks: '0'
-  remotes: '0'
-  realm_uid: '65534'
-  all_forbidden_denied: 'true'
-  scratch_writable: 'true'
-  probe_see_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_repo: DENIED:FileNotFoundError
-  probe_write_parent_refs: DENIED:FileNotFoundError
-  probe_write_parent_git_config: DENIED:FileNotFoundError
-  probe_write_parent_git_objects: DENIED:FileNotFoundError
-  probe_write_usr: DENIED:OSError
-  probe_write_etc: DENIED:OSError
-  probe_write_host_root: DENIED:PermissionError
-  probe_forbidden_env_token: DENIED:KeyError
-  probe_network: DENIED:URLError
-  probe_write_scratch: ALLOWED
-  parent_refs_unchanged: 'true'
-  parent_objects_unchanged: 'true'
-  parent_worktree_unchanged: 'true'
-adversarial_probes:
-  see_parent_repo: DENIED:FileNotFoundError
-  write_parent_repo: DENIED:FileNotFoundError
-  write_parent_refs: DENIED:FileNotFoundError
-  write_parent_git_config: DENIED:FileNotFoundError
-  write_parent_git_objects: DENIED:FileNotFoundError
-  write_usr: DENIED:OSError
-  write_etc: DENIED:OSError
-  write_host_root: DENIED:PermissionError
-  forbidden_env_token: DENIED:KeyError
-  network: DENIED:URLError
-  write_scratch: ALLOWED
+expected_violations: []
 environment_id: 05fb1d1e8f917bec
+issuer_note: bootstrap attempt 2 per BUILD-006-BOOTSTRAP + AMENDMENT-1
