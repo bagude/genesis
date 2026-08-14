@@ -1,0 +1,125 @@
+proposal: BUILD-005
+phase: -1
+
+goal: >
+  Decision-rule and capability closure (AUDIT-004 repair): the
+  acceptance rule belongs to accepted authority and cannot be supplied
+  by the caller; exceptional admission becomes a first-class
+  ExceptionGrant in authority state; unaccepted successor law executes
+  only inside a bounded, measured capability envelope; successor
+  viability becomes a promotion precondition alongside parent
+  admission; payload state and governance-ledger state are
+  mechanically distinguished; evidence chronology becomes a typed,
+  honestly-claimed property with remote pre-promotion evidence.
+
+obligations: >
+  Obligation 1 ACCEPTED: gate.py and promote.py lose every
+  caller-supplied policy channel (--expect-violation removed, no
+  waiver/ignore/alternate-rule inputs). The effective decision rule is
+  BaseDecisionRule (zero expected violations) plus at most one
+  AuthorizedExceptionGrant read by G_B from the ACCEPTED parent
+  canonical tree at construction/exceptions/<transition>.yaml —
+  present-in-parent-state or nonexistent; the invoker of P_B cannot
+  mint one. BUILD-004's bootstrap-amendment exception is grandfathered
+  as a historical grant (derived status, closed records untouched);
+  BUILD-005 itself uses ExceptionGrant NONE; BUILD-006+ default is the
+  empty set.
+  Obligation 2 ACCEPTED: a new operator tools/prospective.py evaluates
+  successor viability inside the frozen CapabilityEnvelope — isolated
+  disposable clone at the exact candidate commit with all remotes
+  removed, environment reduced by env -i to PATH plus scratch HOME,
+  network denied by unshare -n (measured effective at inspection) —
+  and records measured envelope evidence per run: remote count,
+  environment inventory, network-probe outcome, and pre/post equality
+  of the real repository's refs. A detached worktree is no longer
+  treated as isolation.
+  Obligation 3 ACCEPTED: promotion requires parent PASS and successor
+  viability PASS; parent evaluation executes only accepted code over
+  candidate data and runs first; parent FAIL rejects without ever
+  executing candidate code; viability FAIL rejects with both results
+  recorded. Parent admission and successor viability remain distinct
+  recorded objects (GateResult vs ProspectiveEvaluationResult).
+  Obligation 4 ACCEPTED via Option A, measured viable at inspection:
+  evidence objects are pushed to the remote governance branch
+  claude/genesis-evidence BEFORE promotion, giving independently
+  inspectable pre-promotion chronology for BUILD-005 onward; if a
+  ceremony-time push fails the claim downgrades explicitly to
+  CHRONOLOGY_UNATTESTED. BUILD-004's statuses are retyped
+  (MIRROR_BOUND / OUTCOME_REPRODUCED / CHRONOLOGY_UNATTESTED) as
+  derived vocabulary without touching its closed records.
+  Obligation 5 ACCEPTED: CanonicalState = (PayloadState,
+  GovernanceLedger) enters the ontology; the verifier derives
+  payload_state (tree of the newest promoted target) and
+  governance_ledger_head; rejection semantics are stated exactly —
+  payload unchanged, ledger appended — and the phrase "canonical
+  unchanged" is retired from tools and records.
+
+mechanism: >
+  verify_construction.py v6: derives payload_state and
+  governance_ledger_head; retypes receipt provenance/chronology
+  statuses (BUILD-004: MIRROR_BOUND with chronology
+  CHRONOLOGY_UNATTESTED and reproduction OUTCOME_REPRODUCED; BUILD-005+
+  schema-v3 receipts require viability PASS, envelope evidence,
+  chronology status, and an exception field that is NONE unless a
+  grant record existed in the parent canonical tree with exactly the
+  receipt's expected set). gate.py v3: no policy arguments; exception
+  grants resolved from parent state only. promote.py v3: no policy
+  arguments; sequence parent-eval -> bounded viability -> authorize ->
+  promote -> receipt v3 + evidence mirror; rejection appends
+  RejectionEvent while leaving payload untouched. prospective.py: the
+  bounded evaluator implementing the CapabilityEnvelope with measured
+  evidence. authority.yaml updated to the realized blobs including
+  prospective.py. ALGEBRA v1.5 and PHASES updated. The BUILD-005
+  admission ceremony itself follows BUILD-005-BOOTSTRAP (executor
+  ceremony under the frozen rule), because the accepted P_B carries
+  the defects under repair; the corrected tools become authoritative
+  for BUILD-006 with no bootstrap exception.
+
+allowed_scope:
+  - construction/
+  - tools/
+
+prediction:
+  proposal_precedence_BUILD-005: PASS
+  scope_conformance_BUILD-005: PASS
+  budget_conformance_BUILD-005: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_parent_law_expected_violations: "0"
+  reported_successor_viability_verdict: PASS
+  reported_exception_grant: NONE
+  reported_capability_network_denied: "true"
+  reported_capability_remotes: "0"
+  reported_chronology_status: REMOTE_PRE_PROMOTION
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - the CapabilityEnvelope denies canonical/governance writes, ref
+    updates, credentials, and network for the prospective run; it is
+    process/namespace-level isolation on a shared host, not an OS-image
+    sandbox, and side channels are out of scope (declared limitation)
+  - chronology certification covers BUILD-005 onward; BUILD-004 and
+    earlier remain CHRONOLOGY_UNATTESTED permanently
+  - branch protection remains an external capability limitation until
+    the repository owner enables it; promotion exclusivity remains
+    detection-grade
+  - the parent evaluation necessarily executes accepted-law code with
+    ordinary host capabilities; the bounded envelope applies to
+    UNACCEPTED candidate code, which is the surface AUDIT-004 names
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-006
+
+deferred:
+  - schema comment updates for the new vocabulary (carried deferral)
+  - deep re-execution of all historical receipts in CI (newest only)
+  - platform branch protection and required checks (owner action)
+
+budget:
+  max_files_changed: 14
