@@ -1,0 +1,92 @@
+proposal: BUILD-003
+phase: -1
+
+goal: >
+  Trust-boundary closure (AUDIT-002 repair): candidates are authorized
+  by the parent law V_t, never by the law they themselves carry;
+  candidate and canonical states are separated by a pre-promotion gate
+  with rejection leaving canonical unchanged; experiment evidence is
+  closure-bound to target, probe definition, environment, result, and
+  transition identity. The causal roles R_B (measurement), E_B
+  (experiment), V_B (verification), G_B (authorization), P_B
+  (promotion) remain distinct operators.
+
+allowed_scope:
+  - construction/
+  - tools/
+
+mechanism: >
+  Obligation 1 (parent-law authorization): a new gate operator G_B
+  (tools/gate.py) extracts the complete law bundle of Canonical_t —
+  verifier, schemas, probe registry — from the canonical commit via git
+  plumbing into a scratch directory and runs THAT verifier against the
+  candidate tree. Accept requires parent-law PASS; the candidate's own
+  V_{t+1} is additionally run prospectively and recorded, but is never
+  the admitting authority. Law evolution without self-authorization:
+  a candidate's grounding must stay within the parent law's derived
+  vocabulary; novel measurements enter that grounding under reported_
+  keys this once and become derived (authoritative) vocabulary only for
+  subsequent transitions, so each law amendment is admitted entirely by
+  its predecessor. BUILD-003 itself is gated by V_{BUILD-002}
+  accordingly: its grounding uses only V_{BUILD-002}-derived keys plus
+  reported_ gate verdicts.
+  Obligation 2 (candidate/canonical separation): candidates are
+  constructed on a candidate branch (candidate/BUILD-NNN), never on the
+  canonical branch. G_B verifies the candidate under V_t; P_B (promotion)
+  is a fast-forward of canonical onto the gated candidate and exists as
+  a distinct step from verification. On gate FAIL the canonical ref is
+  untouched and the attempt is preserved as a distinct rejection record
+  under construction/rejections/ (add-only namespace, joining record
+  immutability law), satisfying Verify=FAIL => Canonical_{t+1} =
+  Canonical_t with the rejection as ledger event. CI on canonical is
+  explicitly reclassified as attestation, not authorization.
+  Obligation 3 (closure-bound experiment evidence): E_B emits per-probe
+  evidence bound to target tree identity, probe definition identity
+  (content hash of the registry entry), environment identity (a derived
+  fingerprint of interpreter, platform, and pyyaml version), result,
+  and transition identity; groundings carry this binding. Verification
+  of a CLOSED grounding validates its probe keys against the
+  closure-bound evidence recorded at its boundary, never against a
+  fresh rerun; fresh reruns are published under present-time keys as
+  current attestation only, mirroring the time-indexing of ledger-global
+  keys established in BUILD-002.
+  Secondary findings: experiment_tree_isolation is renamed to the
+  narrowed authoritative_tree_status_preserved (old key retained as a
+  derived alias for closed records); environment identity becomes the
+  first-class derived key environment_id; rejected attempts are
+  preserved via the rejections namespace above.
+
+prediction:
+  proposal_precedence_BUILD-003: PASS
+  scope_conformance_BUILD-003: PASS
+  budget_conformance_BUILD-003: PASS
+  probe_pyyaml_import: PASS
+  experiment_tree_isolation: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_prospective_law_verdict: PASS
+
+probes:
+  - pyyaml_import
+
+non_claims:
+  - the gate becomes mechanically self-hosting only from BUILD-004
+    onward; BUILD-003's own admission under V_{BUILD-002} is performed
+    by running the extracted parent law bundle against the candidate
+    and recording its verdict as reported_ evidence, since V_{BUILD-002}
+    has no gate vocabulary
+  - candidate/canonical branch separation governs transitions from
+    BUILD-004 onward as mechanical law; for BUILD-003 it is practiced
+    (candidate branch + parent-law gate before promotion) but attested
+    reported_, not derived
+  - environment identity fingerprints the language runtime and library
+    surface, not the OS image; full environment reproducibility is out
+    of scope
+  - no world ontology, model harness, surface, or ruler code; Phase 0
+    (Genesis / contracts) moves to BUILD-004
+
+budget:
+  max_files_changed: 12
