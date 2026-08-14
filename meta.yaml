@@ -1,19 +1,19 @@
 schema: ProspectiveEvaluation/3
 transition: BUILD-007
-stage: payload
-target_commit: d4be1948669334b7e39da14e1604119424e8fd75
+stage: canonical
+target_commit: a8b484470396ca3facf5a652b56faab96e3238c9
 capability_policy_id: realm/v2:unshare-mn+ro-nosuid-nodev-binds+chroot+setpriv-65534+no-new-privs+empty-caps
 capability_policy_blob: 35b5a8df6ede4fccf0768c42d0ec26c8eefc41fe
 evaluator_blob: 7568246e57f0c4257ac165194471fd334562e53b
 environment_id: 05fb1d1e8f917bec
 integrity_before:
   parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
-  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
-  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
+  parent_object_store_digest: bfb15b74cfb7c97aad24ab5553b83afe5e062c9547c51f1bd8c8470fb0d6cf41
+  parent_refs_digest: a2323d38042ce35f23a165356f90fc3f3c0df04f419e0d2a2f522af68eb5b4ea
 integrity_after:
   parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
-  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
-  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
+  parent_object_store_digest: bfb15b74cfb7c97aad24ab5553b83afe5e062c9547c51f1bd8c8470fb0d6cf41
+  parent_refs_digest: a2323d38042ce35f23a165356f90fc3f3c0df04f419e0d2a2f522af68eb5b4ea
 verdict: PASS
 exit_code: 0
 violations: []
@@ -173,3 +173,4 @@ capability_envelope:
   probe_unshare_from_realm: DENIED
   probe_signal_host_process: DENIED
   probe_write_scratch: ALLOWED
+staged_state_commit: a8b484470396ca3facf5a652b56faab96e3238c9
