@@ -1,0 +1,20 @@
+transition: BUILD-007
+state: CANONICAL_VIABILITY_FAILED
+target_commit: 877710b413609551f1a676c9f2733454b44c3e02
+staged_state_commit: 30e377bdb05562c1d748813526fb2a937bca92f4
+parent_canonical: 5c1bddcecc2a222471c2b6f84c3f28f41ff096db
+parent_law_verdict: PASS
+payload_viability_verdict: PASS
+canonical_viability_verdict: FAIL
+violations:
+- 'construction/receipts/BUILD-007.yaml: no canonical viability evidence object (successor
+  viability of the inheriting state unproven)'
+- 'construction/receipts/BUILD-007.yaml: promoted receipt lacks successor viability
+  PASS (dual-gate law)'
+- 'construction/receipts/BUILD-007.yaml: viability evidence unreadable: evidence object
+  ''None'' unreadable and no mirror'
+evidence_object: 2618503979a667ef01a93a961b715c4ae0d51667
+payload_viability_evidence_object: a2c04c6cbd0dfb0d4ebb7a805296df4e39702d93
+canonical_viability_evidence_object: 10af030b9e14ce0138138d89bfff5723fa39553f
+chronology_status: REMOTE_EVIDENCE_PRESENT
+note: 'no authority was transferred: canonical ref never moved'
