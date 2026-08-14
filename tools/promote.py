@@ -76,10 +76,13 @@ def push_evidence() -> str:
     try:
         lib.git("push", "origin",
                 f"{lib.EVIDENCE_REF}:refs/heads/{EVIDENCE_BRANCH}")
-        return "REMOTE_PRE_PROMOTION"
+        # Honest: presence on the remote branch, NOT pre-promotion
+        # ordering (AUDIT-005 obligation 6). The verifier derives this
+        # independently; the receipt value is informational only.
+        return "REMOTE_EVIDENCE_PRESENT"
     except RuntimeError as exc:
         print(f"warning: evidence branch push failed: {exc}")
-        return "CHRONOLOGY_UNATTESTED"
+        return "REMOTE_EVIDENCE_ABSENT"
 
 
 def reject(canonical: str, transition: str, records: dict) -> None:
@@ -164,7 +167,7 @@ def main() -> int:
 
     receipt = {
         "receipt": "PromotionReceipt",
-        "schema_version": 3,
+        "schema_version": 4,
         "transition": args.transition,
         "target_commit": candidate_sha,
         "target_tree": parent["target_tree"],
@@ -177,8 +180,13 @@ def main() -> int:
         "expected_violations": parent["expected_violations"],
         "exception_grant": grant_id,
         "successor_viability_verdict": viability["verdict"],
-        "capability_envelope": viability["capability_envelope"],
+        "capability_policy_id": viability.get("capability_policy_id"),
+        # Duplicate of the certified envelope for convenience; V_B
+        # requires exact equality with the bound evidence object and
+        # certifies from the evidence, never from this copy.
+        "capability_envelope": viability.get("capability_envelope"),
         "chronology_status": chronology,
+        "prepromotion_chronology": "UNATTESTED",
         "environment_id": parent["environment_id"],
     }
     parent_meta = {k: v for k, v in parent.items()

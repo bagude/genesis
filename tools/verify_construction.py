@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Construction-ledger verifier (law for construction/ records).
 
-v3 (BUILD-002, AUDIT-001 repair). The verifier is split into two
+v7 (BUILD-006, AUDIT-005 repair): capability envelope derived from bound
+prospective evidence; adversarial probe certification; honest chronology
+(REMOTE_EVIDENCE_PRESENT, prepromotion UNATTESTED). Earlier: v3 (BUILD-002). The verifier is split into two
 operators with distinct capability sets:
 
   R_B — passive measurement: derivation over git evidence only. No
@@ -85,6 +87,11 @@ RECEIPT_REQUIRED_FROM = 4  # first proposal whose closed grounding MUST
 RECEIPT_V3_FROM = 5     # first proposal requiring schema-v3 receipts:
                         # dual-gate viability, capability envelope,
                         # typed chronology, explicit exception field
+RECEIPT_V4_FROM = 6     # first proposal requiring schema-v4 receipts:
+                        # capability envelope DERIVED from bound
+                        # prospective evidence, adversarial probes all
+                        # denied, storage independence, host-after
+                        # invariants, capability_policy identity
 
 FAILURES: list[str] = []
 
@@ -579,11 +586,18 @@ def check_receipts(proposals: dict[str, dict],
                 # not mechanically reconstructable (AUDIT-003). Never
                 # silently normalized.
                 provenance[pid] = "HISTORICAL_UNVERIFIED"
-                provenance[f"chronology_{pid}"] = "CHRONOLOGY_UNATTESTED"
+                provenance[f"chronology_{pid}"] = "REMOTE_EVIDENCE_ABSENT"
+            # Pre-promotion ordering is not mechanically attested for any
+            # transition (AUDIT-005 obligation 6): no externally-ordered
+            # platform event is available to the verifier.
+            provenance[f"prepromotion_{pid}"] = "UNATTESTED"
             provenance[f"exception_{pid}"] = \
                 check_receipt_exception(label, rec)
             if pid_number(pid) >= RECEIPT_V3_FROM:
                 check_receipt_v3(label, rec, schema_v)
+            if pid_number(pid) >= RECEIPT_V4_FROM:
+                provenance[f"capability_{pid}"] = \
+                    check_receipt_v4(label, rec, schema_v)
     for pid in sorted(grounded):
         if pid not in proposals or pid_number(pid) < RECEIPT_REQUIRED_FROM \
                 or pid in receipts:
@@ -661,14 +675,15 @@ def check_receipt_provenance(label: str, rec: dict) -> str:
 
 
 def check_receipt_chronology(label: str, rec: dict) -> str:
-    """Typed chronology (AUDIT-004 obligation 4). REMOTE_PRE_PROMOTION
-    is honored only when the receipt claims it AND the gate evidence
-    commit is contained in the governance evidence branch; otherwise
-    the status is CHRONOLOGY_UNATTESTED. Reproduction is a separate
-    property (--reproduce), never conflated with chronology."""
-    claimed = rec.get("chronology_status")
-    if claimed != "REMOTE_PRE_PROMOTION":
-        return "CHRONOLOGY_UNATTESTED"
+    """Typed chronology, honest (AUDIT-005 Finding 5 / obligation 6).
+    Graph membership of the evidence commit in the governance evidence
+    branch proves only REMOTE_EVIDENCE_PRESENT — a post-promotion push
+    satisfies the same check — never pre-promotion ordering. This is a
+    DERIVED informational value and NEVER fails the ledger: an isolated
+    clone legitimately lacks the evidence branch ref. REMOTE_PRE_PROMOTION
+    is retired; pre-promotion ordering is reported separately as
+    prepromotion_chronology = UNATTESTED (no externally-ordered platform
+    event proves it)."""
     evidence_id = rec.get("evidence_object", "")
     for ref in EVIDENCE_BRANCH_REFS:
         try:
@@ -676,10 +691,8 @@ def check_receipt_chronology(label: str, rec: dict) -> str:
         except RuntimeError:
             continue
         if evidence_id and is_ancestor_or_equal(evidence_id, tip):
-            return "REMOTE_PRE_PROMOTION"
-    fail(f"{label}: claims REMOTE_PRE_PROMOTION but the gate evidence "
-         f"commit is not contained in any evidence branch ref")
-    return "CHRONOLOGY_UNATTESTED"
+            return "REMOTE_EVIDENCE_PRESENT"
+    return "REMOTE_EVIDENCE_ABSENT"
 
 
 def check_receipt_exception(label: str, rec: dict) -> str:
@@ -729,6 +742,12 @@ def check_receipt_v3(label: str, rec: dict, schema_v: int) -> None:
     if rec.get("successor_viability_verdict") != "PASS":
         fail(f"{label}: promoted receipt lacks successor viability PASS "
              f"(dual-gate law)")
+    # Envelope-key assertions below describe the schema-v3 (BUILD-005)
+    # capability envelope only. Schema-v4 receipts (BUILD-006+) carry a
+    # richer measured envelope certified by check_receipt_v4 from the
+    # bound prospective evidence; do not apply the v3 keys to them.
+    if rec.get("schema_version", 1) >= 4:
+        return
     envelope = rec.get("capability_envelope")
     if not isinstance(envelope, dict):
         fail(f"{label}: missing capability_envelope evidence")
@@ -750,6 +769,73 @@ def check_receipt_v3(label: str, rec: dict, schema_v: int) -> None:
         fail(f"{label}: viability evidence target does not bind receipt")
     if vmeta.get("verdict") != rec.get("successor_viability_verdict"):
         fail(f"{label}: viability evidence verdict does not bind receipt")
+
+
+# Forbidden effects that MUST be DENIED inside the isolation realm.
+FORBIDDEN_PROBES = (
+    "see_parent_repo", "write_parent_repo", "write_parent_refs",
+    "write_parent_git_config", "write_parent_git_objects",
+    "write_usr", "write_etc", "write_host_root", "forbidden_env_token",
+    "network",
+)
+HOST_AFTER_INVARIANTS = (
+    "parent_refs_unchanged", "parent_objects_unchanged",
+    "parent_worktree_unchanged",
+)
+
+
+def check_receipt_v4(label: str, rec: dict, schema_v: int) -> str:
+    """Capability closure (AUDIT-005). The CERTIFIED capability envelope
+    is read from the BOUND ProspectiveEvaluation evidence object, never
+    from the receipt's own assertion; if the receipt duplicates it, the
+    duplicate must be canonically equal. Every forbidden probe must be
+    DENIED, storage independent (0 hard-links), and host-after
+    invariants intact."""
+    if schema_v < 4:
+        fail(f"{label}: proposals >= BUILD-{RECEIPT_V4_FROM:03d} require "
+             f"schema_version >= 4 receipts")
+        return "SCHEMA_TOO_OLD"
+    pid = rec.get("transition", Path(label).stem)
+    try:
+        vmeta = read_evidence_any(f"{pid}-viability",
+                                  {"evidence_object":
+                                   rec.get("viability_evidence_object")})
+    except RuntimeError as exc:
+        fail(f"{label}: viability evidence unreadable: {exc}")
+        return "EVIDENCE_MISSING"
+    certified = vmeta.get("capability_envelope")
+    if not isinstance(certified, dict):
+        fail(f"{label}: bound viability evidence has no capability_envelope")
+        return "NO_ENVELOPE"
+    # Receipt duplicate (if any) must equal the evidence exactly.
+    dup = rec.get("capability_envelope")
+    if dup is not None and dup != certified:
+        fail(f"{label}: receipt capability_envelope is not canonically "
+             f"equal to the bound evidence envelope")
+        return "ENVELOPE_CONFLICT"
+    # Policy identity must be bound.
+    if not vmeta.get("capability_policy_id"):
+        fail(f"{label}: viability evidence lacks capability_policy_id")
+    # Certify the measured effects — derived, not asserted.
+    ok = True
+    if certified.get("storage_hardlinks") != "0":
+        fail(f"{label}: storage_hardlinks = "
+             f"{certified.get('storage_hardlinks')} (candidate substrate "
+             f"shares objects with parent)")
+        ok = False
+    probes = vmeta.get("adversarial_probes", {})
+    for name in FORBIDDEN_PROBES:
+        val = probes.get(name, "MISSING")
+        if not str(val).startswith("DENIED"):
+            fail(f"{label}: adversarial probe {name} = {val} (forbidden "
+                 f"effect not denied)")
+            ok = False
+    for inv in HOST_AFTER_INVARIANTS:
+        if certified.get(inv) != "true":
+            fail(f"{label}: host-after invariant {inv} = "
+                 f"{certified.get(inv)}")
+            ok = False
+    return "CAPABILITY_CERTIFIED" if ok else "CAPABILITY_VIOLATION"
 
 
 # --- record checks -----------------------------------------------------------
@@ -910,8 +996,12 @@ def main() -> int:
     for key, status in provenance.items():
         if key.startswith("chronology_"):
             derived[f"receipt_chronology_{key[11:]}"] = status
+        elif key.startswith("prepromotion_"):
+            derived[f"prepromotion_chronology_{key[13:]}"] = status
         elif key.startswith("exception_"):
             derived[f"exception_grant_{key[10:]}"] = status
+        elif key.startswith("capability_"):
+            derived[f"capability_{key[11:]}"] = status
         else:
             derived[f"receipt_provenance_{key}"] = status
 
@@ -975,15 +1065,80 @@ def reproduce() -> int:
                                  transition=pid, emit_evidence=False)
     same_verdict = result["verdict"] == meta.get("verdict")
     same_violations = result["violations"] == (meta.get("violations") or [])
-    if same_verdict and same_violations:
-        print(f"reproduce {pid}: REPRODUCED "
+    parent_ok = same_verdict and same_violations
+    if parent_ok:
+        print(f"reproduce {pid}: PARENT REPRODUCED "
               f"(verdict={result['verdict']}, "
               f"violations={len(result['violations'])})")
-        return 0
-    print(f"reproduce {pid}: DIVERGENT — live verdict "
-          f"{result['verdict']} / violations {result['violations']} vs "
-          f"evidence {meta.get('verdict')} / {meta.get('violations')}")
-    return 1
+    else:
+        print(f"reproduce {pid}: PARENT DIVERGENT — live "
+              f"{result['verdict']} / {result['violations']} vs evidence "
+              f"{meta.get('verdict')} / {meta.get('violations')}")
+
+    # AUDIT-005 obligation 5: reproduce the successor gate too. Invariant
+    # fields (target, viability verdict, violation set, forbidden-effect
+    # DENIED set) must match; environment-relative fields are
+    # informational. If the isolation primitive is unavailable here
+    # (e.g. CI without namespace privilege) the evaluator returns
+    # UNAVAILABLE and we run a conformance check instead of falsely
+    # claiming identical reproduction.
+    succ_ok = True
+    if rec.get("schema_version", 1) >= 4 and rec.get("viability_evidence_object"):
+        import prospective
+        vmeta = read_evidence_any(f"{pid}-viability",
+                                  {"evidence_object":
+                                   rec["viability_evidence_object"]})
+        live = prospective.evaluate(rec["target_commit"], pid)
+        if live.get("verdict") == "UNAVAILABLE":
+            conf = conformance_probe(rec["target_commit"])
+            succ_ok = conf["verdict"] == vmeta.get("verdict")
+            print(f"reproduce {pid}: SUCCESSOR CONFORMANCE "
+                  f"(realm unavailable: {live.get('reason','')[:60]}); "
+                  f"candidate-verifier verdict={conf['verdict']} "
+                  f"matches={succ_ok}")
+        else:
+            recorded_probes = vmeta.get("adversarial_probes", {})
+            live_probes = live.get("adversarial_probes", {})
+            denied_match = (
+                {k for k, v in recorded_probes.items()
+                 if str(v).startswith("DENIED")}
+                == {k for k, v in live_probes.items()
+                    if str(v).startswith("DENIED")})
+            succ_ok = (live.get("verdict") == vmeta.get("verdict")
+                       and live.get("violations") == vmeta.get("violations")
+                       and denied_match)
+            print(f"reproduce {pid}: SUCCESSOR "
+                  f"{'REPRODUCED' if succ_ok else 'DIVERGENT'} "
+                  f"(verdict={live.get('verdict')}, denied_match={denied_match})")
+    return 0 if (parent_ok and succ_ok) else 1
+
+
+def conformance_probe(candidate: str) -> dict:
+    """Environment-independent successor conformance: run the candidate
+    verifier over an independent --no-local clone at the candidate
+    commit, without any isolation-primitive claim. Used where the realm
+    is unavailable (declared, not disguised as reproduction)."""
+    import shutil
+    candidate_sha = git("rev-parse", f"{candidate}^{{commit}}")
+    scratch = Path(tempfile.mkdtemp(prefix="genesis-conformance-"))
+    repo = scratch / "repo"
+    try:
+        subprocess.run(["git", "clone", "--quiet", "--no-local",
+                        "--no-hardlinks", str(ROOT), str(repo)],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "checkout", "--quiet", candidate_sha],
+                       cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "remote", "remove", "origin"], cwd=repo,
+                       capture_output=True)
+        res = subprocess.run(
+            [sys.executable, str(repo / "tools" / "verify_construction.py")],
+            capture_output=True, text=True, cwd=repo, timeout=900)
+        violations = sorted(line[5:].strip() for line in res.stdout.splitlines()
+                            if line.startswith("FAIL "))
+        verdict = "PASS" if res.returncode == 0 and not violations else "FAIL"
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+    return {"verdict": verdict, "violations": violations}
 
 
 if __name__ == "__main__":

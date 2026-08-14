@@ -1,4 +1,4 @@
-# Construction Algebra — v1.5 (frozen by BUILD-000; amended by BUILD-001, BUILD-002, BUILD-003, BUILD-004, BUILD-005)
+# Construction Algebra — v1.6 (frozen by BUILD-000; amended by BUILD-001..BUILD-006)
 
 ## Principle
 
@@ -337,6 +337,52 @@ Five causal roles, kept as distinct operators: `R_B` measurement,
   `CHRONOLOGY_UNATTESTED` permanently. Receipts (schema v3, mandatory
   from BUILD-005) bind viability verdict, envelope evidence,
   chronology status, and exception field, all validated by `V_B`.
+
+## Amendment v1.6 — Capability isolation (BUILD-006, from AUDIT-005)
+
+> **InterfaceIsolation ≠ CapabilityIsolation. A child execution is
+> causally isolated only when effects outside its declared capability
+> surface are mechanically unavailable, not merely unused. No shared
+> writable substrate, no hidden causal channel.**
+
+- **Independent substrate.** Prospective evaluation runs over `git
+  clone --no-local --no-hardlinks` of the parent at the exact candidate
+  commit, origin removed — proven by `storage_hardlinks = 0`, not by
+  path inequality.
+- **Isolation realm.** Candidate code executes inside a realm entered
+  by `unshare -m -n` → read-only bind mounts of system dirs (+ minimal
+  `/dev` nodes) → `chroot` → `setpriv` to uid 65534, with a single
+  writable `/work`. The parent repository path does not exist inside
+  the realm. Declared limit: namespace/chroot/unprivileged-uid
+  isolation on a shared kernel, not a VM or audited container runtime.
+- **Adversarial certification.** `tools/realm_probe.py` runs an
+  adversarial battery in the same realm — attempts to see/write the
+  parent repo, its refs, `.git/config`, objects, forbidden env, and
+  network must each be `DENIED`; `/work` writable is the positive
+  control — plus host-after invariants (parent refs, object count,
+  worktree sentinel unchanged). Viability PASS requires candidate
+  verifier PASS **and** every forbidden effect denied **and** every
+  host-after invariant intact. Denials are proven, never inferred from
+  benign behavior.
+- **Certified envelope from evidence.** `CertifiedCapabilityEnvelope =
+  CapabilityEnvelope(BoundProspectiveEvidence)`. `V_B` reads the
+  envelope and adversarial probes from the bound ProspectiveEvaluation
+  evidence object (schema v4 receipts, mandatory from BUILD-006); a
+  receipt duplicate must be canonically equal. The evidence binds
+  candidate identity, evaluator blob, `capability_policy_id`,
+  environment, measured effects, and viability verdict.
+- **Both gates reproduced.** CI re-executes the parent GateRun and the
+  successor evaluation; invariant fields (target, viability verdict,
+  violation set, forbidden-effect DENIED set) must match, environment-
+  relative fields are informational. Where CI lacks namespace
+  privilege, it runs the declared conformance probe and reports
+  isolation availability rather than claiming identical reproduction.
+- **Honest chronology.** `REMOTE_PRE_PROMOTION` is retired. Graph
+  membership yields `REMOTE_EVIDENCE_PRESENT` (presence, not ordering);
+  `prepromotion_chronology = UNATTESTED` for all transitions until an
+  externally-ordered platform event exists. Never fails the ledger —
+  an isolated clone legitimately lacks the evidence branch. Closed
+  records keep their recorded claims; `V_B` derives the honest value.
 
 ## Bootstrap note
 

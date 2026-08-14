@@ -21,6 +21,10 @@ jobs:
       # promotion); fetch them so V_B can verify provenance.
       - run: git fetch origin '+refs/construction/*:refs/construction/*' || true
       - run: python3 tools/verify_construction.py
-      # Independent reproduction of the newest receipt's parent-law
-      # evaluation. CI remains attestation, not gate authority.
+      # Independent reproduction of BOTH gates for the newest receipt:
+      # the parent-law evaluation and the successor viability. Where the
+      # runner lacks namespace privilege to build the isolation realm,
+      # the successor step degrades to the declared conformance probe
+      # rather than claiming identical reproduction. CI remains
+      # attestation, not gate authority.
       - run: python3 tools/verify_construction.py --reproduce

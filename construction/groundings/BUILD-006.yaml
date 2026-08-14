@@ -1,0 +1,86 @@
+proposal: BUILD-006
+format: 2
+
+predicted:
+  proposal_precedence_BUILD-006: PASS
+  scope_conformance_BUILD-006: PASS
+  budget_conformance_BUILD-006: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_successor_viability_verdict: PASS
+  reported_exception_grant: NONE
+  reported_storage_hardlinks: "0"
+  reported_probe_write_parent_repo: DENIED
+  reported_probe_write_parent_refs: DENIED
+  reported_probe_network: DENIED
+  reported_host_parent_unchanged: "true"
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+
+observed:
+  proposal_precedence_BUILD-006: PASS
+  scope_conformance_BUILD-006: PASS
+  budget_conformance_BUILD-006: PASS
+  probe_pyyaml_import: PASS
+  authoritative_tree_status_preserved: PASS
+  attribution_extensions: "0"
+  closed_record_mutations: "0"
+  open_proposals: "0"
+  untracked_commits: "0"
+  reported_parent_law_verdict: PASS
+  reported_successor_viability_verdict: PASS
+  reported_exception_grant: NONE
+  reported_storage_hardlinks: "0"
+  reported_probe_write_parent_repo: DENIED
+  reported_probe_write_parent_refs: DENIED
+  reported_probe_network: DENIED
+  reported_host_parent_unchanged: "true"
+  reported_chronology_status: REMOTE_EVIDENCE_PRESENT
+  reported_prepromotion_chronology: UNATTESTED
+  files_changed_BUILD-006: "13"
+
+unexpected:
+  - >
+    the realm required minimal /dev nodes (git opens /dev/null); the
+    frozen procedure was satisfied by individually binding /dev/null,
+    zero, full, random, urandom rather than exposing the whole host
+    /dev — recorded here because it refines the frozen realm layout
+    without weakening any denial (block devices remain absent)
+  - >
+    v6's chronology check hard-failed inside the isolated clone because
+    the evidence branch ref is legitimately absent there; v7 retires
+    REMOTE_PRE_PROMOTION and derives REMOTE_EVIDENCE_PRESENT as a
+    non-failing informational value, which also corrects the AUDIT-005
+    Finding 5 overclaim on BUILD-004/005 without mutating their records
+  - >
+    attempt 1 (candidate 69c1a2c, both gates PASS, isolation certified)
+    was REJECTED at post-promotion ledger verification by its own law —
+    check_receipt_v3 applied v3-era envelope keys to the v4 receipt; the
+    local promotion was rolled back (payload unchanged), the rejection
+    recorded, the bootstrap amended, and attempt 2 gated the fix; the
+    transition file count rose to 13 accordingly
+  - >
+    the reported_ keys are fixed-point hypotheses; their authoritative
+    counterparts are the GateResult and ProspectiveEvaluation evidence
+    objects (the latter carrying adversarial_probes and the measured
+    capability_envelope) and the schema-v4 receipt, all reconciled by
+    V_B, which certifies the envelope FROM the bound evidence
+
+evidence:
+  audit: construction/audits/AUDIT-005.md
+  bootstrap_authority: construction/audits/BUILD-006-BOOTSTRAP.md
+  proposal_commit: "416ea1e03885502c963496d6572fd1360566c40a"
+  authority_identity_note: derived at ceremony by rule v2; recorded only
+    in evidence objects and the PromotionReceipt, never hand-composed
+  verifier_cmd: python3 tools/verify_construction.py
+
+decision:
+  verdict: REALIZED
+  next: BUILD-007 (Phase 0 — Genesis / contracts), admitted under the
+    accepted BUILD-006 tools with ExceptionGrant NONE and no bootstrap
+    exception
