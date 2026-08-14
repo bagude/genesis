@@ -1,37 +1,175 @@
-schema: GateResult/1
+schema: ProspectiveEvaluation/3
 transition: BUILD-007
+stage: payload
 target_commit: d4be1948669334b7e39da14e1604119424e8fd75
-target_tree: bb31f672b42f96e7be64132d46cbbf82f429ba69
-parent_canonical: a22d8ad388dd3d03b919106e38176acea9bda317
-authority_identity: 2d9b174436b7a9638e08bdd58a164a92a7b01437f690cc164fefc39b70533f44
-authority_rule: v2
-authority_serialization: 'authority-rule:v2
-
-  parent:a22d8ad388dd3d03b919106e38176acea9bda317
-
-  manifest:e1fc99d4a7cbbebdf12f4bf9ca04f56579218299
-
-  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
-
-  16f86a87489736742c4275933fa5dafb2d3ee7e8 tools/authority_lib.py
-
-  4948b7c8bc515bd59359eb6cc3e3b917fbdf85b4 tools/prospective.py
-
-  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
-
-  a79b5825ab222154cb479bb32e68600c745d61f2 tools/realm_probe.py
-
-  d9fae90a426b04f74cef1891cc476d3f1af1cdb7 tools/verify_construction.py
-
-  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
-
-  dddce3bb635dce1f02af9ce6ae51b2d777ac83ef tools/gate.py
-
-  f0db87ca90916e48939b61c042b8319eccdf718e tools/promote.py
-
-  '
+capability_policy_id: realm/v2:unshare-mn+ro-nosuid-nodev-binds+chroot+setpriv-65534+no-new-privs+empty-caps
+capability_policy_blob: 35b5a8df6ede4fccf0768c42d0ec26c8eefc41fe
+evaluator_blob: 7568246e57f0c4257ac165194471fd334562e53b
+environment_id: 05fb1d1e8f917bec
+integrity_before:
+  parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
+  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
+  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
+integrity_after:
+  parent_tracked_worktree_digest: 303291ae4c59e9780c1296b42cf5e187c37cf6e0f0d34a5938ed64c640b55670
+  parent_object_store_digest: e4b23aae32f0a02fdb655a5a26993bfd896809184174d86a4adb9a3ff3c4a01d
+  parent_refs_digest: 419820801dcb73b2ed62210d67cabded5eebc6ebaee790034cf5ecb702c50eaf
 verdict: PASS
 exit_code: 0
 violations: []
-expected_violations: []
-environment_id: 05fb1d1e8f917bec
+privilege_measured:
+  uid: '65534'
+  gid: '65534'
+  euid: '65534'
+  egid: '65534'
+  CapInh: '0000000000000000'
+  CapPrm: '0000000000000000'
+  CapEff: '0000000000000000'
+  CapBnd: '0000000000000000'
+  CapAmb: '0000000000000000'
+  NoNewPrivs: '1'
+privilege_certified: true
+privilege_problems: []
+probes:
+  parent_repo_visibility:
+    probe_id: parent_repo_visibility
+    attempted_effect: resolve any known parent-repository path
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: no parent path resolves inside the realm
+    verdict: PASS
+  write_parent_worktree_file:
+    probe_id: write_parent_worktree_file
+    attempted_effect: create a file inside the parent worktree
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=ENOENT
+    verdict: PASS
+  write_parent_ref:
+    probe_id: write_parent_ref
+    attempted_effect: create a ref file under parent .git/refs/heads
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=ENOENT
+    verdict: PASS
+  write_parent_git_config:
+    probe_id: write_parent_git_config
+    attempted_effect: append to parent .git/config
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=ENOENT
+    verdict: PASS
+  write_parent_git_object:
+    probe_id: write_parent_git_object
+    attempted_effect: create a file under parent .git/objects
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=ENOENT
+    verdict: PASS
+  write_ro_usr:
+    probe_id: write_ro_usr
+    attempted_effect: create a file under /usr
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=EROFS
+    verdict: PASS
+  write_ro_etc:
+    probe_id: write_ro_etc
+    attempted_effect: create a file under /etc
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=EROFS
+    verdict: PASS
+  write_realm_root:
+    probe_id: write_realm_root
+    attempted_effect: create a file at the realm root
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=EACCES
+    verdict: PASS
+  forbidden_env_present:
+    probe_id: forbidden_env_present
+    attempted_effect: read credential/proxy environment variables
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: none of 8 credential/proxy variables present; env keys=['HOME', 'LC_CTYPE',
+      'PATH']
+    verdict: PASS
+  network_connect:
+    probe_id: network_connect
+    attempted_effect: open an outbound TCP/HTTPS connection
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: errno=ENETUNREACH
+    verdict: PASS
+  setuid_root_syscall:
+    probe_id: setuid_root_syscall
+    attempted_effect: call setuid(0)
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: setuid(0) -> EPERM
+    verdict: PASS
+  setuid_binary_elevation:
+    probe_id: setuid_binary_elevation
+    attempted_effect: exec a reachable setuid binary and gain euid 0
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: setuid binaries ['/usr/bin/su', '/bin/su', '/usr/bin/sudo', '/usr/bin/mount',
+      '/bin/mount', '/usr/bin/passwd', '/usr/bin/newgrp', '/usr/bin/chsh'] did not
+      yield uid 0 (no_new_privs / nosuid)
+    verdict: PASS
+  mount_from_realm:
+    probe_id: mount_from_realm
+    attempted_effect: mount a filesystem from inside the realm
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: "exit=32: mount: /tmp: must be superuser to use mount.\n       dmesg(1)\
+      \ may have more information after failed mount system call."
+    verdict: PASS
+  unshare_from_realm:
+    probe_id: unshare_from_realm
+    attempted_effect: create a new mount namespace from inside
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: 'exit=1: unshare: unshare failed: Operation not permitted'
+    verdict: PASS
+  signal_host_process:
+    probe_id: signal_host_process
+    attempted_effect: signal an out-of-realm process (pid 1)
+    expected_outcome: DENIED
+    observed_outcome: DENIED
+    evidence: kill(1,0) -> EPERM
+    verdict: PASS
+  write_scratch:
+    probe_id: write_scratch
+    attempted_effect: create a file in the writable scratch
+    expected_outcome: ALLOWED
+    observed_outcome: ALLOWED
+    evidence: wrote /work/.probe_ok
+    verdict: PASS
+probes_certified: true
+probe_problems: []
+capability_envelope:
+  storage_hardlinks: '0'
+  remotes: '0'
+  no_new_privs: '1'
+  realm_uid: '65534'
+  parent_tracked_worktree_digest_equal: 'true'
+  parent_object_store_digest_equal: 'true'
+  parent_refs_digest_equal: 'true'
+  probe_parent_repo_visibility: DENIED
+  probe_write_parent_worktree_file: DENIED
+  probe_write_parent_ref: DENIED
+  probe_write_parent_git_config: DENIED
+  probe_write_parent_git_object: DENIED
+  probe_write_ro_usr: DENIED
+  probe_write_ro_etc: DENIED
+  probe_write_realm_root: DENIED
+  probe_forbidden_env_present: DENIED
+  probe_network_connect: DENIED
+  probe_setuid_root_syscall: DENIED
+  probe_setuid_binary_elevation: DENIED
+  probe_mount_from_realm: DENIED
+  probe_unshare_from_realm: DENIED
+  probe_signal_host_process: DENIED
+  probe_write_scratch: ALLOWED
