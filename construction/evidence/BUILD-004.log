@@ -1,0 +1,38 @@
+derived attribution_extensions = 0
+derived authoritative_tree_status_preserved = PASS
+derived budget_conformance_BUILD-000 = PASS
+derived budget_conformance_BUILD-001 = PASS
+derived budget_conformance_BUILD-002 = PASS
+derived budget_conformance_BUILD-003 = PASS
+derived budget_conformance_BUILD-004 = PASS
+derived closed_record_mutations = 0
+derived environment_id = 05fb1d1e8f917bec
+derived experiment_tree_isolation = PASS
+derived files_changed_BUILD-000 = 7
+derived files_changed_BUILD-001 = 9
+derived files_changed_BUILD-002 = 9
+derived files_changed_BUILD-003 = 11
+derived files_changed_BUILD-004 = 13
+derived open_proposals = 0
+derived probe_pyyaml_import = PASS
+derived proposal_commit_BUILD-000 = 4531f2b1abca7430a7a41919cc548d288441a186
+derived proposal_commit_BUILD-001 = 6bceceb2db028bd2251ea471d5bd41a62abeff06
+derived proposal_commit_BUILD-002 = b6dc47e23d2294e1c1bf64a1500f8b76b78d9476
+derived proposal_commit_BUILD-003 = 7c90a23f4986cde1dd375d7e70402aba07086cfc
+derived proposal_commit_BUILD-004 = bfe2fc9fcf2a3cd3aeda9dc918002272ae22371a
+derived proposal_precedence_BUILD-000 = PASS
+derived proposal_precedence_BUILD-001 = PASS
+derived proposal_precedence_BUILD-002 = PASS
+derived proposal_precedence_BUILD-003 = PASS
+derived proposal_precedence_BUILD-004 = FAIL
+derived scope_conformance_BUILD-000 = PASS
+derived scope_conformance_BUILD-001 = PASS
+derived scope_conformance_BUILD-002 = PASS
+derived scope_conformance_BUILD-003 = PASS
+derived scope_conformance_BUILD-004 = PASS
+derived untracked_commits = 0
+FAIL BUILD-004: proposal commit is not a strict ancestor of all realization commits
+FAIL BUILD-004: closed transition has no promotion receipt (required from BUILD-004)
+FAIL construction/groundings/BUILD-004.yaml.predicted: 'proposal_precedence_BUILD-004: PASS' contradicts derived value 'FAIL'
+FAIL construction/groundings/BUILD-004.yaml.observed: 'proposal_precedence_BUILD-004: PASS' contradicts derived value 'FAIL'
+construction ledger: 5 proposal(s), 5 grounding(s), 4 violation(s)
