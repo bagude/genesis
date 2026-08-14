@@ -1,0 +1,23 @@
+receipt: PromotionReceipt
+schema_version: 3
+transition: BUILD-005
+target_commit: 9d2dbfca135c0a512768ba969904d5bf16513420
+target_tree: 190bf1a29ae6d5bc0126f2e5a8881e677997ee6e
+parent_canonical: 365d07a5401c2964bbf662f2b07bc408057d6848
+authority_identity: 02f9aed764b825c133180d8bfbb9f7cf2d3be3c3c7cde53a92697f1514026f1c
+authority_rule: v2
+evidence_object: b82e22997367e4170f663a47cab79cdd0949778d
+viability_evidence_object: 6b5042e9d082d2854449fe22a1cbb5102a2950a2
+parent_law_verdict: PASS
+expected_violations: []
+exception_grant: NONE
+successor_viability_verdict: PASS
+capability_envelope:
+  remotes: "0"
+  network_denied: "true"
+  environment_vars:
+    - HOME
+    - PATH
+  real_repo_refs_unchanged: "true"
+chronology_status: REMOTE_PRE_PROMOTION
+environment_id: 05fb1d1e8f917bec

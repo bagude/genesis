@@ -1,0 +1,14 @@
+schema: ProspectiveEvaluation/1
+transition: BUILD-005
+target_commit: 9d2dbfca135c0a512768ba969904d5bf16513420
+verdict: PASS
+exit_code: 0
+violations: []
+capability_envelope:
+  remotes: '0'
+  network_denied: 'true'
+  environment_vars:
+  - HOME
+  - PATH
+  real_repo_refs_unchanged: 'true'
+environment_id: 05fb1d1e8f917bec

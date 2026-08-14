@@ -1,0 +1,34 @@
+schema: GateResult/1
+transition: BUILD-005
+target_commit: 9d2dbfca135c0a512768ba969904d5bf16513420
+target_tree: 190bf1a29ae6d5bc0126f2e5a8881e677997ee6e
+parent_canonical: 365d07a5401c2964bbf662f2b07bc408057d6848
+authority_identity: 02f9aed764b825c133180d8bfbb9f7cf2d3be3c3c7cde53a92697f1514026f1c
+authority_rule: v2
+authority_serialization: 'authority-rule:v2
+
+  parent:365d07a5401c2964bbf662f2b07bc408057d6848
+
+  manifest:76cc4547410da127b0393e0d4aa4915f9a68d8aa
+
+  01eb084c0d6b856d5b80da368abad96d2cf7e57b tools/probes.yaml
+
+  0ea005fad49f746216d00aea21cc25053aa00704 tools/verify_construction.py
+
+  16f86a87489736742c4275933fa5dafb2d3ee7e8 tools/authority_lib.py
+
+  4803c84eedbea42f0c5ca5f41c236f8c868fc5f7 tools/promote.py
+
+  7ae5c10dfa06b8c6f6f1822eb69e96c31388a170 tools/gate.py
+
+  a706e30ba7dae9bd17b6114144bbe3d2a123d870 construction/schemas/build_proposal.schema.yaml
+
+  dcadfd1efa6a3981883b570a876c58662ef74ddc construction/schemas/build_grounding.schema.yaml
+
+  '
+verdict: PASS
+exit_code: 0
+violations: []
+expected_violations: []
+environment_id: 05fb1d1e8f917bec
+issuer_note: bootstrap ceremony per BUILD-005-BOOTSTRAP; exception grant NONE
